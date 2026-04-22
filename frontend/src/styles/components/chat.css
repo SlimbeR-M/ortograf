@@ -64,6 +64,7 @@
     font-size: var(--font-size-sm);
     line-height: 1.7;
     max-width: 80%;
+    white-space: pre-wrap;
 }
 
 .message--user .message__bubble {
