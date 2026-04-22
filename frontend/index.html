@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Corrector ortográfico inteligente con IA" />
+    <title>Ortograf IA</title>
+  </head>
+  <body>
+    <div id="app">
+      <button class="sidebar__toggle-btn" id="sidebar-toggle-btn" type="button" aria-label="Abrir menú">☰</button>
+      <div class="sidebar-overlay" id="sidebar-overlay"></div>
+      
+      <div class="ortograf-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+          <header class="sidebar__header">
+            <h1 class="sidebar__title">
+              Ortograf <span class="sidebar__badge">IA</span>
+            </h1>
+            <button class="sidebar__profile-btn" id="profile-btn" aria-label="Perfil de usuario" type="button">
+              J
+            </button>
+          </header>
+          <nav class="sidebar__nav" aria-label="Navegación de chats">
+            <button class="sidebar__new-chat-btn" id="new-chat-btn" type="button">
+              + Nuevo chat
+            </button>
+            <ul class="sidebar__history-list" id="chat-history-list" role="list">
+              <!-- historial de chats pa despues -->
+            </ul>
+          </nav>
+        </aside>
+
+        <!-- CHAT -->
+        <main class="chat">
+          <!-- ÁREA DE MENSAJES -->
+          <section class="chat__display" id="chat-display" aria-live="polite" aria-label="Conversación">
+            <div class="chat__view-limit">
+              <article class="chat__welcome" id="welcome-screen">
+                <img class="chat__welcome-icon" src="./logo.png" alt="Logo de ortograf">
+                <h2 class="chat__welcome-title">¿Qué vamos a escribir?</h2>
+                <p class="chat__welcome-desc">
+                  Ingresa un texto para analizar su ortografía.
+                </p>
+              </article>
+              <div class="chat__messages" id="chat-messages" aria-label="Mensajes del chat"></div>
+            </div>
+          </section>
+
+          <!-- TEXTO -->
+          <footer class="chat__footer">
+            <div class="editor" id="chat-editor">
+              <div class="editor__wrapper">
+                <textarea
+                  class="editor__input"
+                  id="user-input"
+                  placeholder="Escribe o pega tu texto aquí..."
+                  rows="1"
+                  aria-label="Campo de texto para corrección"
+                  autocomplete="off"
+                  spellcheck="false"
+                ></textarea>
+                <button
+                  class="editor__send-btn"
+                  id="send-btn"
+                  type="button"
+                  aria-label="Enviar texto"
+                  disabled
+                >
+                  <img
+                    class="editor__send-icon"
+                    src="/src/assets/enviar.png"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+            </div>
+          </footer>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
