@@ -69,13 +69,13 @@
 .message--user .message__bubble {
     background-color: var(--color-accent);
     color: #fff;
-    border-bottom-right-radius: var(--radius-sm);
+    border-bottom-right-radius: 0px;
 }
 
 .message--ai .message__bubble {
     background-color: var(--color-surface);
     color: var(--color-text-primary);
-    border-bottom-left-radius: var(--radius-sm);
+    border-bottom-left-radius: 0px;
     border: 1px solid var(--color-border);
 }
 
