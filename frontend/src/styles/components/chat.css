@@ -1,0 +1,118 @@
+/* ============================================
+    COMPONENT — Área de mensajes
+   ============================================ */
+
+/* ── Pantalla de bienvenida ── */
+.chat__welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: var(--space-4);
+    padding: var(--space-10) var(--space-4);
+    min-height: 60vh;
+}
+
+.chat__welcome-icon {
+    max-width: 350px;
+}
+
+.chat__welcome-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.chat__welcome-desc {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    max-width: 360px;
+    line-height: 1.7;
+}
+
+/* ── Historial de mensajes ── */
+.chat__messages {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    padding-bottom: var(--space-4);
+}
+
+.chat__messages--hidden {
+    display: none;
+}
+
+/* ── burbuja usuario ── */
+.message {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.message--user {
+    align-items: flex-end;
+}
+
+.message--ai {
+    align-items: flex-start;
+}
+
+.message__bubble {
+    padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    line-height: 1.7;
+    max-width: 80%;
+}
+
+.message--user .message__bubble {
+    background-color: var(--color-accent);
+    color: #fff;
+    border-bottom-right-radius: var(--radius-sm);
+}
+
+.message--ai .message__bubble {
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+    border-bottom-left-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+
+/* ── Texto con correcciones marcadas ── */
+.correction--error {
+    color: var(--color-error);
+    text-decoration: underline wavy var(--color-error);
+}
+
+.correction--ok {
+    color: var(--color-success);
+}
+
+/* ── Indicador de escritura de la IA ── */
+.message__typing {
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-5);
+    background-color: var(--color-surface);
+    border-radius: var(--radius-lg);
+    border-bottom-left-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    width: fit-content;
+}
+
+.message__typing-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-text-secondary);
+    animation: typing-bounce 1.2s infinite ease-in-out;
+}
+
+.message__typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.message__typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing-bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40%           { transform: translateY(-6px); opacity: 1; }
+}

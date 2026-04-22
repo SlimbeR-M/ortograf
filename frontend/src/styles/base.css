@@ -1,0 +1,122 @@
+/* ============================================
+    Variables, reset y tipografía global
+   ============================================ */
+
+:root {
+  /* Colores base */
+    --color-bg:           #0f0f0f;
+    --color-bg-sidebar:   #171717;
+    --color-surface:      #1e1e1e;
+    --color-border:       #2a2a2a;
+
+  /* Texto */
+    --color-text-primary:   #ececec;
+    --color-text-secondary: #8a8a8a;
+    --color-text-disabled:  #4a4a4a;
+
+  /* Acento */
+    --color-accent:       #1663a5;
+    --color-accent-bright:#1089f3;
+    --color-accent-hover: #2041a5;
+
+  /* Semánticos */
+    --color-error:   #f87171;
+    --color-success: #4ade80;
+
+  /* Tipografía */
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-size-xs:   0.75rem;   /* 12px */
+    --font-size-sm:   0.875rem;  /* 14px */
+    --font-size-base: 1rem;      /* 16px */
+    --font-size-lg:   1.12rem;  /* 18px */
+    --font-size-xl:   1.25rem;   /* 20px */
+
+  /* Espaciado */
+    --space-1:  0.25rem;   /* 4px */
+    --space-2:  0.5rem;    /* 8px */
+    --space-3:  0.75rem;   /* 12px */
+    --space-4:  1rem;      /* 16px */
+    --space-5:  1.25rem;   /* 20px */
+    --space-6:  1.5rem;    /* 24px */
+    --space-8:  2rem;      /* 32px */
+    --space-10: 2.5rem;    /* 40px */
+
+  /* Bordes */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-full: 100%;
+
+  /* Transiciones */
+    --transition-fast: 250ms ease;
+    --transition-base: 500ms ease;
+
+  /* Layout */
+    --sidebar-width: 260px;
+}
+
+/* Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* Scrollbar para firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+}
+
+/* Scrollbar personalizada webkit */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-disabled);
+}
+
+/* Utilidades base */
+button {
+    font-family: var(--font-sans);
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
+}
+
+textarea {
+    font-family: var(--font-sans);
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+}
+
+img {
+    display: block;
+    max-width: 100%;
+}

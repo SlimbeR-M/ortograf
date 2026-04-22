@@ -1,0 +1,75 @@
+/* ============================================
+    LAYOUT — Estructura principal de la pantalla
+   ============================================ */
+
+#app {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+.ortograf-layout {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ── Chat ── */
+.chat {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.chat__display {
+    overflow-y: auto;
+    padding: var(--space-6) var(--space-4);
+}
+
+.chat__view-limit {
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.chat__footer {
+    padding: var(--space-4);
+    padding-top: 0;
+}
+
+/* ── Overlay celular ── */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0006;
+    z-index: 10;
+}
+
+/* ── Responsive celular── */
+@media (max-width: 768px) {
+    .ortograf-layout {
+        grid-template-columns: 1fr; 
+        position: relative;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 20;
+        transform: translateX(-100%);   
+        transition: transform var(--transition-base);
+    }
+
+    .sidebar--open {
+        transform: translateX(0);       
+    }
+
+    .sidebar-overlay--visible {
+        display: block;                 
+    }
+}
