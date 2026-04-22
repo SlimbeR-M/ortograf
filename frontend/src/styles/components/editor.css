@@ -71,7 +71,11 @@
     transition: filter var(--transition-base), opacity var(--transition-base);
 }
 
-.editor__send-icon:hover {
+.editor__send-btn:disabled:hover .editor__send-icon{
+    filter: brightness(0) saturate(100%) invert(13%) sepia(100%) saturate(7471%) hue-rotate(359deg) brightness(97%) contrast(111%);
+}
+
+.editor__send-btn:hover:not(:disabled) .editor__send-icon {
     opacity: 1;
     filter: invert(1) 
         drop-shadow(0px 0px 15px #00fbf7);
