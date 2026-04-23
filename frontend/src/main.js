@@ -23,17 +23,31 @@ buttonText.addEventListener("click", () => {
     bienvenida.style.display = "none";
     text.value = '';
     buttonText.disabled = true;
-    chatDisplay.scrollTo({ top: chatDisplay.scrollHeight, behavior: 'smooth' });
+    respuestaIA();
 });
 
 text.addEventListener("keydown", (tecla) => {
     if(tecla.key === "Enter") {
-        if(tecla.shiftKey) {
-            /* Hace un salto xd */
-        }
+        if(tecla.shiftKey) {}
         else {
             tecla.preventDefault();
             buttonText.click();
         }
     }
 } );
+
+const respuestaIA = ()=> {
+    const mensajeIA= document.createElement("div");
+    mensajeIA.className = "message__typing";
+    mensajeIA.innerHTML = '<span class="message__typing-dot"></span>'.repeat(3);
+    chat.appendChild(mensajeIA);
+    text.disabled = true;
+    chatDisplay.scrollTo({ top: chatDisplay.scrollHeight, behavior: 'smooth' });
+    setTimeout(() => {
+        mensajeIA.innerHTML = "";
+        mensajeIA.className = "message message--ai";
+        mensajeIA.innerHTML = '<p class = "message__bubble">Ta bien</p>';
+        chatDisplay.scrollTo({ top: chatDisplay.scrollHeight, behavior: 'smooth' });
+        text.disabled = false;
+    }, 3000);
+}
