@@ -13,6 +13,8 @@ text.addEventListener("input", () => {
     } else {
         buttonText.disabled = true;
     }
+    text.style.height = "auto";
+    text.style.height = text.scrollHeight + "px";
 });
 
 buttonText.addEventListener("click", async() => {
@@ -27,6 +29,7 @@ buttonText.addEventListener("click", async() => {
     bienvenida.style.display = "none";
     text.value = '';
     buttonText.disabled = true;
+    text.style.height = "auto";
 
     //indicador de pensamiento
     const typing= document.createElement("div");
