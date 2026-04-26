@@ -14,6 +14,6 @@ export const respuestaIA = async (texto) => {
 
     const datos = await respuesta.json();
 
-    return datos.mensaje;
+    return datos.texto_corregido;
 
 }
