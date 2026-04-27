@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from app.services.ai_service import corregir_texto
+from app.services.ai_service import corregir_texto, revisar_texto
 
 class TextoEntrada(BaseModel):
     texto: str
@@ -19,3 +19,8 @@ app.add_middleware(
 def corregir(datos: TextoEntrada):
     errores, texto_corregido = corregir_texto(datos.texto)
     return {"errores": errores, "texto_corregido": texto_corregido}
+
+@app.post("/revisar")
+def revisar(datos: TextoEntrada):
+    sugerencias = revisar_texto(datos.texto)
+    return sugerencias

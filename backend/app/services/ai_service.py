@@ -32,3 +32,7 @@ def corregir_texto(texto):
             fin = error.offset + error.error_length
             texto = texto[:inicio] + mejor_sugerencia + texto[fin:]
     return errores, texto
+
+def revisar_texto(texto):
+    errores = tool.check(texto)
+    return{"errores": errores}
