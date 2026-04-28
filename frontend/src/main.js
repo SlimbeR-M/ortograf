@@ -11,7 +11,8 @@ const text = document.querySelector("#user-input"),
 
 let esperandoRespuesta = false,
     cancelado = false,
-    debounceTimer = null;
+    debounceTimer = null,
+    erroresActuales = [];
 
 text.addEventListener("input", () => {
     if(text.value.trim().length > 0) {
@@ -106,6 +107,7 @@ text.addEventListener("keydown", (tecla) => {
 } );
 
 const mostrarErrores = (texto, errores) => {
+    erroresActuales = errores || [];
     let textoAProcesar = texto.endsWith('\n') ? texto + ' ' : texto;
     if(!errores || errores.length === 0) {
         highlight.textContent = textoAProcesar;
@@ -123,9 +125,74 @@ const mostrarErrores = (texto, errores) => {
             antes = resultado.slice(0, inicio),
             despues = resultado.slice(final);
         
-        resultado = `${antes}<span class="error">${palabra}</span>${despues}`
+        const sugerencia = error.replacements.length > 0 ? error.replacements[0] : 'Sin sugerencias';
+        resultado = `${antes}<span class="error" data-sugerencia="${sugerencia}">${palabra}</span>${despues}`
     } )
 
     highlight.innerHTML = resultado;
 
 }
+
+highlight.addEventListener("click", () => {
+    text.focus(); 
+});
+
+
+
+const tooltip = document.createElement('div');
+tooltip.className = 'tooltip-sugerencia';
+document.body.appendChild(tooltip);
+
+text.addEventListener('mousemove', (e) => {
+    if(erroresActuales.length === 0) {
+        tooltip.style.opacity = '0';
+        return;
+    }
+
+    const rect = text.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top + text.scrollTop;
+    
+    const style = window.getComputedStyle(text);
+    const lineHeight = parseFloat(style.lineHeight);
+    const paddingTop = parseFloat(style.paddingTop);
+    const paddingLeft = parseFloat(style.paddingLeft);
+    
+    const lineIndex = Math.floor((y - paddingTop) / lineHeight);
+    const lines = text.value.split('\n');
+    
+    let charIndex = 0;
+    for(let i = 0; i < lineIndex && i < lines.length; i++) {
+        charIndex += lines[i].length + 1;
+    }
+    
+    if(lineIndex < lines.length) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.font = `${style.fontSize} ${style.fontFamily}`;
+        const lineText = lines[lineIndex] || '';
+        let col = 0;
+        for(let i = 0; i <= lineText.length; i++) {
+            if(ctx.measureText(lineText.slice(0, i)).width >= x - paddingLeft) break;
+            col = i;
+        }
+        charIndex += col;
+    }
+    
+    const error = erroresActuales.find(err =>
+        charIndex >= err.offset && charIndex < err.offset + err.error_length
+    );
+    
+    if(error && error.replacements.length > 0) {
+        tooltip.textContent = `Sugerencias: ${error.replacements.slice(0, 5).join(', ')}`;
+        tooltip.style.left = e.clientX + 10 + 'px';
+        tooltip.style.top = e.clientY + 15 + 'px';
+        tooltip.style.opacity = '1';
+    } else {
+        tooltip.style.opacity = '0';
+    }
+});
+
+text.addEventListener('mouseleave', () => {
+    tooltip.style.opacity = '0';
+});
