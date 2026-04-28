@@ -12,8 +12,23 @@ export const respuestaIA = async (texto) => {
         body: JSON.stringify({texto: texto})
     });
 
-    const datos = await respuesta.json();
+    const datos = await respuesta.json()
 
-    return datos.texto_corregido;
+    return datos.texto_corregido
+
+}
+
+export const revisarTexto = async(texto) => {
+    const respuesta = await fetch("http://localhost:8000/revisar", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({texto: texto})
+    });
+
+    const errores = await respuesta.json()
+
+    return errores.errores
 
 }

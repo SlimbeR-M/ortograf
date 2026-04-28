@@ -1,4 +1,4 @@
-import { respuestaIA } from './api/spelling';
+import { respuestaIA, revisarTexto } from './api/spelling';
 import './styles/main.css';
 
 const text = document.querySelector("#user-input"),
@@ -6,10 +6,12 @@ const text = document.querySelector("#user-input"),
     chat  = document.querySelector("#chat-messages"),
     bienvenida = document.querySelector("#welcome-screen"),
     chatDisplay = document.querySelector("#chat-display"),
-    icono = document.querySelector(".editor__send-icon");
+    icono = document.querySelector(".editor__send-icon"),
+    highlight = document.querySelector("#editor-highlight");
 
 let esperandoRespuesta = false,
-    cancelado = false;
+    cancelado = false,
+    debounceTimer = null;
 
 text.addEventListener("input", () => {
     if(text.value.trim().length > 0) {
@@ -18,7 +20,23 @@ text.addEventListener("input", () => {
         buttonText.disabled = true;
     }
     text.style.height = "auto";
-    text.style.height = text.scrollHeight + "px";
+    const nuevoAlto = text.scrollHeight + "px";
+    text.style.height = nuevoAlto;
+    highlight.style.height = nuevoAlto;
+
+    highlight.scrollTop = text.scrollTop;
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+        const errores = await revisarTexto(text.value);
+        mostrarErrores(text.value, errores);
+        
+        highlight.scrollTop = text.scrollTop;
+    }, 400);
+});
+
+text.addEventListener("scroll", () => {
+    highlight.scrollTop = text.scrollTop;
 });
 
 buttonText.addEventListener("click", async() => {
@@ -79,7 +97,7 @@ buttonText.addEventListener("click", async() => {
 
 text.addEventListener("keydown", (tecla) => {
     if(tecla.key === "Enter") {
-        if(tecla.shiftKey) {}
+        if(tecla.shiftKey) { highlight.scrollTop = text.scrollTop;}
         else {
             tecla.preventDefault();
             buttonText.click();
@@ -87,3 +105,27 @@ text.addEventListener("keydown", (tecla) => {
     }
 } );
 
+const mostrarErrores = (texto, errores) => {
+    let textoAProcesar = texto.endsWith('\n') ? texto + ' ' : texto;
+    if(!errores || errores.length === 0) {
+        highlight.textContent = textoAProcesar;
+        return;
+    }
+
+    errores.sort((a,b) => b.offset - a.offset);
+
+    let resultado = textoAProcesar;
+
+    errores.forEach((error) => {
+        let inicio = error.offset,
+            final = inicio + error.error_length,
+            palabra = resultado.slice(inicio, final),
+            antes = resultado.slice(0, inicio),
+            despues = resultado.slice(final);
+        
+        resultado = `${antes}<span class="error">${palabra}</span>${despues}`
+    } )
+
+    highlight.innerHTML = resultado;
+
+}
