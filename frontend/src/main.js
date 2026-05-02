@@ -57,7 +57,7 @@ buttonText.addEventListener("click", async() => {
     let texto = text.value;
     const mensaje = document.createElement("div");
     mensaje.className = "message message--user";
-    mensaje.innerHTML = `<p class = "message__bubble">${texto}</p>`;
+    mensaje.innerHTML = `<p class="message__bubble">${texto.replace(/\n/g, '<br>')}</p>`;
     chat.appendChild(mensaje);
 
     //Limpiar y desabilitar
@@ -79,6 +79,21 @@ buttonText.addEventListener("click", async() => {
     icono.src = "/src/assets/cancelar.png";
     buttonText.disabled = false;
     const datos = await respuestaIA(texto)
+
+    //Mostrar error en burbuja de usuario
+    if (datos.cambios && datos.cambios.length > 0) {
+    let textoMarcado = texto.replace(/\n/g, '<br>')
+    datos.cambios.forEach(c => {
+        if (c.original && c.original.trim()) {
+            textoMarcado = textoMarcado.replace(
+                c.original,
+                `<span class="error-highlight">${c.original}</span>`
+            )
+        }
+    })
+    mensaje.querySelector('.message__bubble').innerHTML = textoMarcado
+}
+
     if(cancelado) {
         typing.remove();
         esperandoRespuesta = false;

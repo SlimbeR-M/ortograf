@@ -134,6 +134,9 @@
     font-size: 0.74rem;
 }
 
+.error-highlight {
+    text-decoration: underline wavy #dc3545;
+}
 
 @keyframes typing-bounce {
     0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
