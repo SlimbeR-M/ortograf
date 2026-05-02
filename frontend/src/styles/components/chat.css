@@ -113,6 +113,28 @@
 .message__typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .message__typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
+
+.message__score {
+    font-size: 0.78rem;
+    margin-top: 6px;
+    opacity: 0.85;
+}
+
+.message__cambios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.cambio-tag {
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 3px 10px;
+    font-size: 0.74rem;
+}
+
+
 @keyframes typing-bounce {
     0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
     40%         { transform: translateY(-6px) scale(1.2); opacity: 1;  background-color: var(--color-accent); }

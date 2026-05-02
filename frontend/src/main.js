@@ -78,7 +78,7 @@ buttonText.addEventListener("click", async() => {
 
     icono.src = "/src/assets/cancelar.png";
     buttonText.disabled = false;
-    const respuesta = await respuestaIA(texto)
+    const datos = await respuestaIA(texto)
     if(cancelado) {
         typing.remove();
         esperandoRespuesta = false;
@@ -86,10 +86,31 @@ buttonText.addEventListener("click", async() => {
         return;
     }
 
+    // Construir HTML de la respuesta
+    let html = `<p class="message__bubble">${datos.texto_corregido.replace(/\n/g, '<br>')}</p>`
+
+    // Score del usuario
+    if (datos.score) {
+        const color = datos.score.porcentaje >= 75 ? '#4caf50' : datos.score.porcentaje >= 50 ? '#ff9800' : '#f44336'
+        html += `<div class="message__score" style="color:${color}">
+            <span>✏️ Escritura: ${datos.score.porcentaje}% — ${datos.score.nivel}</span>
+        </div>`
+    }
+
+    // Cambios realizados
+    if (datos.cambios && datos.cambios.length > 0) {
+        html += `<div class="message__cambios">`
+        datos.cambios.forEach(c => {
+            if (c.tipo === 'reemplazo') {
+                html += `<span class="cambio-tag">📝 ${c.razon}</span>`
+            }
+        })
+        html += `</div>`
+    }
 
     //mostrar respuesta
     typing.className = "message message--ai";
-    typing.innerHTML = `<p class = "message__bubble">${respuesta}</p>`;
+    typing.innerHTML = html;
     chatDisplay.scrollTo({ top: chatDisplay.scrollHeight, behavior: 'smooth' });
     text.disabled = false;
     esperandoRespuesta = false;
