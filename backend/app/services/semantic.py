@@ -21,7 +21,6 @@ def apply_semantic_map(text: str, guards=None) -> str:
     for k, v in SEMANTIC_MAP.items():
         if k in lower_text:
 
-            # 🚫 NO tocar si está protegido por contexto
             if k in guards:
                 continue
 

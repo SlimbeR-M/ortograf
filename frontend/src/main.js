@@ -64,6 +64,9 @@ buttonText.addEventListener("click", async() => {
     bienvenida.style.display = "none";
     text.value = '';
     text.style.height = "auto";
+    highlight.innerHTML = '';          
+    highlight.style.height = "auto"; 
+    erroresActuales = []; 
 
     //indicador de pensamiento
     const typing= document.createElement("div");
