@@ -68,6 +68,7 @@ backend/
 ---
 
 ## Pipeline de corrección
+```
 texto original
 │
 ▼
@@ -81,7 +82,7 @@ restaurar_tecnicos  → TECH_0 → deploy
 resolver_homofonos  → has/haz/as, de/dé, sino/si no
 capitalizar_NER     → rosa (sujeto) → Rosa
 finalize_text       → mayúsculas y punto final
-
+```
 
 ---
 
