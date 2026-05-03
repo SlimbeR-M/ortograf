@@ -42,25 +42,30 @@ Corrector ortográfico y gramatical inteligente con IA local. Analiza textos en 
 ---
 
 ## Arquitectura del backend
+
+```
 backend/
 └── app/
-├── main.py
-├── data/
-│   ├── slang_dict.json          # Diccionario de jerga
-│   ├── semantic_map.json        # Mapa semántico
-│   └── tech_whitelist.json      # Términos técnicos protegidos
-└── services/
-├── pipeline.py              # Orquestador principal
-├── normalize.py             # Limpieza de texto
-├── slang.py                 # Sustitución de jerga
-├── spelling.py              # Corrección ortográfica
-├── grammar.py               # Reglas gramaticales
-├── tech_guard.py            # Protección de anglicismos
-├── homofonos.py             # Desambiguación de homófonos
-├── ner.py                   # Reconocimiento de entidades
-├── postprocess.py           # Capitalización y puntuación
-├── scorer.py                # Evaluación de escritura
-└── diff.py                  # Detección de cambios
+    ├── main.py
+    ├── data/
+    │   ├── slang_dict.json          # Diccionario de jerga
+    │   ├── semantic_map.json        # Mapa semántico
+    │   └── tech_whitelist.json      # Términos técnicos protegidos
+    └── services/
+        ├── pipeline.py              # Orquestador principal
+        ├── normalize.py             # Limpieza de texto
+        ├── slang.py                 # Sustitución de jerga
+        ├── spelling.py              # Corrección ortográfica
+        ├── grammar.py               # Reglas gramaticales
+        ├── tech_guard.py            # Protección de anglicismos
+        ├── homofonos.py             # Desambiguación de homófonos
+        ├── ner.py                   # Reconocimiento de entidades
+        ├── postprocess.py           # Capitalización y puntuación
+        ├── scorer.py                # Evaluación de escritura
+        └── diff.py                  # Detección de cambios
+```
+
+---
 
 ## Pipeline de corrección
 texto original
