@@ -1,0 +1,19 @@
+[
+  "update", "updates", "glitchy", "rollback", "crash", "crashear",
+  "server", "backend", "frontend", "deploy", "deployment", "pipeline",
+  "branch", "commit", "merge", "pull", "push", "fetch", "clone",
+  "debug", "debugger", "bug", "bugs", "fix", "hotfix", "patch",
+  "release", "sprint", "scrum", "agile", "kanban", "ticket",
+  "api", "API", "rest", "json", "xml", "html", "css", "http", "https",
+  "token", "oauth", "login", "logout", "signup", "email",
+  "cache", "cached", "caching", "docker", "kubernetes", "cloud",
+  "database", "query", "script", "framework", "library", "runtime",
+  "timeout", "callback", "async", "await", "request", "response",
+  "endpoint", "webhook", "socket", "thread", "stack", "heap",
+  "vibe", "mindset", "fixear", "debuguear", "traceback", "log",
+  "container", "containers", "main", "master", "fitear", "fitea",
+  "fiteando", "deployar", "buildear", "buildeando", "deployando",
+  "dev", "devs", "ops", "sysadmin", "devops", "fullstack", "repo",
+  "feature", "features", "project", "setup", "landing", "staging",
+  "production", "environment", "workflow", "repository", "milestone"
+]
