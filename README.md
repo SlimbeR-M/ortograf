@@ -102,9 +102,6 @@ finalize_text       → mayúsculas y punto final
 | language-tool-python | 3.3.0 | Detección de errores ortográficos y gramaticales |
 | spacy | 3.8.13 | NER y análisis de dependencias gramaticales |
 | es-core-news-md | 3.8.0 | Modelo de español para spaCy |
-| transformers | 5.6.2 | Tokenizador y modelos de lenguaje |
-| torch | 2.11.0 | Backend de cómputo para transformers |
-| sentencepiece | 0.2.1 | Tokenización de mT5 |
 
 ---
 
