@@ -28,3 +28,17 @@ backend/.env
 backend/app/__pycache__/
 backend/app/services/__pycache__/
 backend/**/*.pycs
+
+# Python cache completo
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+
+# Entorno virtual
+backend/venv/
+
+# Checkpoints del modelo (cientos de MB)
+backend/checkpoints/
+
+# Base de datos
+backend/ortograf.db
