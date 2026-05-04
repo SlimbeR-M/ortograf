@@ -20,7 +20,7 @@
               Ortograf <span class="sidebar__badge">IA</span>
             </h1>
             <button class="sidebar__profile-btn" id="profile-btn" aria-label="Perfil de usuario" type="button">
-              J
+              <span id="profile-initial">?</span>
             </button>
           </header>
           <nav class="sidebar__nav" aria-label="Navegación de chats">
@@ -82,6 +82,94 @@
           </footer>
         </main>
       </div>
+      <!-- MODAL AUTH -->
+      <div class="auth-overlay" id="auth-overlay" hidden>
+        <div class="auth-modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+
+          <button class="auth-modal__close" id="auth-close-btn" type="button" aria-label="Cerrar">✕</button>
+
+          <!-- Tabs -->
+          <div class="auth-modal__tabs">
+            <button class="auth-modal__tab auth-modal__tab--active" id="tab-login" type="button">
+              Iniciar sesión
+            </button>
+            <button class="auth-modal__tab" id="tab-register" type="button">
+              Registrarse
+            </button>
+          </div>
+
+          <!-- Login -->
+          <div class="auth-modal__form" id="form-login">
+            <h2 class="auth-modal__title" id="auth-title">Bienvenido de nuevo</h2>
+            <p class="auth-modal__desc">Inicia sesión para guardar tu historial</p>
+            <div class="auth-modal__field">
+              <label for="login-email">Correo electrónico</label>
+              <input type="email" id="login-email" placeholder="tu@correo.com" autocomplete="email" />
+            </div>
+            <div class="auth-modal__field">
+              <label for="login-password">Contraseña</label>
+              <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+            </div>
+            <p class="auth-modal__error" id="login-error" hidden></p>
+            <button class="auth-modal__submit" id="login-submit" type="button">
+              Iniciar sesión
+            </button>
+            <button class="auth-modal__link" id="forgot-btn" type="button">
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
+
+          <!-- Register -->
+          <div class="auth-modal__form" id="form-register" hidden>
+            <h2 class="auth-modal__title">Crea tu cuenta</h2>
+            <p class="auth-modal__desc">Guarda tu historial y accede desde cualquier lugar</p>
+            <div class="auth-modal__field">
+              <label for="register-name">Nombre</label>
+              <input type="text" id="register-name" placeholder="Tu nombre" autocomplete="name" />
+            </div>
+            <div class="auth-modal__field">
+              <label for="register-email">Correo electrónico</label>
+              <input type="email" id="register-email" placeholder="tu@correo.com" autocomplete="email" />
+            </div>
+            <div class="auth-modal__field">
+              <label for="register-password">Contraseña</label>
+              <input type="password" id="register-password" placeholder="••••••••" autocomplete="new-password" />
+            </div>
+            <p class="auth-modal__error" id="register-error" hidden></p>
+            <button class="auth-modal__submit" id="register-submit" type="button">
+              Crear cuenta
+            </button>
+          </div>
+
+          <!-- Recuperar contraseña -->
+          <div class="auth-modal__form" id="form-forgot" hidden>
+            <h2 class="auth-modal__title">Recuperar contraseña</h2>
+            <p class="auth-modal__desc">Ingresa tu correo y tu nueva contraseña</p>
+            <div class="auth-modal__field">
+              <label for="forgot-email">Correo electrónico</label>
+              <input type="email" id="forgot-email" placeholder="tu@correo.com" autocomplete="email" />
+            </div>
+            <div class="auth-modal__field">
+              <label for="forgot-password">Nueva contraseña</label>
+              <input type="password" id="forgot-password" placeholder="••••••••" autocomplete="new-password" />
+            </div>
+            <div class="auth-modal__field">
+              <label for="forgot-password2">Confirmar contraseña</label>
+              <input type="password" id="forgot-password2" placeholder="••••••••" />
+            </div>
+            <p class="auth-modal__error" id="forgot-error" hidden></p>
+            <button class="auth-modal__submit" id="forgot-submit" type="button">
+              Cambiar contraseña
+            </button>
+            <button class="auth-modal__link" id="back-to-login" type="button">
+              ← Volver al login
+            </button>
+          </div>
+        </div>
+      </div>
+
+      </div>
+    </div>
     </div>
     <script type="module" src="./src/main.js"></script>
   </body>
