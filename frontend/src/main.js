@@ -132,6 +132,17 @@ buttonText.addEventListener("click", async() => {
     buttonText.disabled = true;
     icono.src = "/src/assets/enviar.png";
 
+    // Guardar en historial si hay sesión
+    // Guardar en historial si hay sesión
+    if (usuarioActual) {
+        document.dispatchEvent(new CustomEvent("chatMensajeGuardado", {
+            detail: { 
+                usuario: mensaje.querySelector('.message__bubble').innerHTML,
+                ia: html
+            }
+        }));
+    }
+
 
 });
 
@@ -464,3 +475,170 @@ if (tokenGuardado && usuarioGuardado) {
     usuarioActual = JSON.parse(usuarioGuardado);
     actualizarBotonPerfil();
 }
+
+
+// ─── HISTORIAL DE CHATS ───────────────────────────────────────────────────────
+
+const chatHistoryList = document.querySelector("#chat-history-list");
+const newChatBtn = document.querySelector("#new-chat-btn");
+
+let chatActualId = null;
+let mensajesActuales = []; // {rol, contenido}
+
+function getToken() {
+    return localStorage.getItem("token");
+}
+
+// Cargar historial del sidebar
+async function cargarHistorial() {
+    if (!usuarioActual) {
+        chatHistoryList.innerHTML = '';
+        return;
+    }
+
+    try {
+        const res = await fetch("http://localhost:8000/chats/", {
+            headers: { "Authorization": `Bearer ${getToken()}` }
+        });
+        const chats = await res.json();
+        renderHistorial(chats);
+    } catch {
+        console.error("Error cargando historial");
+    }
+}
+
+function renderHistorial(chats) {
+    chatHistoryList.innerHTML = '';
+    chats.forEach(c => {
+        const li = document.createElement("li");
+        li.className = "sidebar__history-item";
+        li.dataset.id = c.id;
+        li.innerHTML = `
+            <button class="sidebar__history-btn" type="button">
+                <span class="sidebar__history-title">${c.titulo}</span>
+            </button>
+            <button class="sidebar__history-delete" data-id="${c.id}" type="button" aria-label="Eliminar chat">✕</button>
+        `;
+        li.querySelector(".sidebar__history-btn").addEventListener("click", () => cargarChat(c.id));
+        li.querySelector(".sidebar__history-delete").addEventListener("click", (e) => {
+            e.stopPropagation();
+            eliminarChat(c.id);
+        });
+        chatHistoryList.appendChild(li);
+    });
+}
+
+// Cargar mensajes de un chat
+async function cargarChat(id) {
+    try {
+        const res = await fetch(`http://localhost:8000/chats/${id}`, {
+            headers: { "Authorization": `Bearer ${getToken()}` }
+        });
+        const data = await res.json();
+
+        chatActualId = id;
+        mensajesActuales = data.mensajes;
+
+        chat.innerHTML = '';
+        bienvenida.style.display = "none";
+
+        data.mensajes.forEach(m => {
+            const div = document.createElement("div");
+            div.className = `message message--${m.rol === "usuario" ? "user" : "ai"}`;
+            
+            if (m.rol === "usuario") {
+                div.innerHTML = `<p class="message__bubble">${m.contenido}</p>`;
+            } else {
+                // La IA guarda el HTML completo con score y cambios
+                div.innerHTML = m.contenido;
+            }
+            
+            chat.appendChild(div);
+        });
+
+        chatDisplay.scrollTo({ top: chatDisplay.scrollHeight, behavior: 'smooth' });
+    } catch {
+        console.error("Error cargando chat");
+    }
+}
+
+// Guardar chat actual
+async function guardarChat(textoUsuario, textoIA) {
+    if (!usuarioActual) return;
+
+    mensajesActuales.push({ rol: "usuario", contenido: textoUsuario });
+    mensajesActuales.push({ rol: "ia", contenido: textoIA });
+
+    const titulo = textoUsuario.replace(/<[^>]*>/g, '').slice(0, 40) || "Nuevo chat";
+
+    if (chatActualId) {
+        // Chat ya existe — actualizar (por ahora recrear)
+        await eliminarChat(chatActualId, false);
+    }
+
+    try {
+        const res = await fetch("http://localhost:8000/chats/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ titulo, mensajes: mensajesActuales })
+        });
+        const data = await res.json();
+        chatActualId = data.id;
+        await cargarHistorial();
+    } catch {
+        console.error("Error guardando chat");
+    }
+}
+
+// Eliminar chat
+async function eliminarChat(id, recargar = true) {
+    try {
+        await fetch(`http://localhost:8000/chats/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${getToken()}` }
+        });
+        if (recargar) {
+            if (chatActualId === id) nuevoChat();
+            await cargarHistorial();
+        }
+    } catch {
+        console.error("Error eliminando chat");
+    }
+}
+
+// Nuevo chat
+function nuevoChat() {
+    chatActualId = null;
+    mensajesActuales = [];
+    chat.innerHTML = '';
+    bienvenida.style.display = "";
+}
+
+newChatBtn.addEventListener("click", nuevoChat);
+
+// Actualizar iniciarSesion y cerrarSesion para cargar historial
+const _iniciarSesionOriginal = iniciarSesion;
+iniciarSesion = async function(data) {
+    _iniciarSesionOriginal(data);
+    await cargarHistorial();
+};
+
+const _cerrarSesionOriginal = cerrarSesion;
+cerrarSesion = function() {
+    _cerrarSesionOriginal();
+    chatHistoryList.innerHTML = '';
+    nuevoChat();
+};
+
+// Guardar chat al recibir respuesta de la IA
+// Esto se conecta al flujo existente — sobreescribimos el fin del click
+const _buttonTextClick = buttonText.onclick;
+document.addEventListener("chatMensajeGuardado", async (e) => {
+    await guardarChat(e.detail.usuario, e.detail.ia);
+});
+
+// Cargar historial si ya hay sesión al iniciar
+if (usuarioActual) cargarHistorial();

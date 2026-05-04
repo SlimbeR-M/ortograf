@@ -90,27 +90,60 @@
     gap: var(--space-1);
 }
 
-/* Ítem individual  */
 .sidebar__history-item {
-    padding: var(--space-2) var(--space-3);
+    display: flex;
+    align-items: center;
     border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-    transition: background-color var(--transition-fast), color var(--transition-fast);
+    transition: background-color var(--transition-fast);
 }
 
 .sidebar__history-item:hover {
     background-color: var(--color-surface);
-    color: var(--color-text-primary);
 }
 
 .sidebar__history-item--active {
     background-color: var(--color-surface);
+}
+
+.sidebar__history-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    transition: color var(--transition-fast);
+}
+
+.sidebar__history-item:hover .sidebar__history-btn {
     color: var(--color-text-primary);
+}
+
+.sidebar__history-title {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar__history-delete {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    padding: var(--space-2);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.sidebar__history-item:hover .sidebar__history-delete {
+    opacity: 1;
 }
 
 /* ── Botón hamburguesa ── */

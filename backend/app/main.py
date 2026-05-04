@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from app.services.pipeline import correct_text, review_text
 from app.db.database import engine, Base
 from app.routes.auth import router as auth_router
+from app.routes.chats import router as chats_router
 
 # Crear tablas al iniciar
 Base.metadata.create_all(bind=engine)
@@ -21,8 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rutas de autenticación
+# Rutas
 app.include_router(auth_router)
+app.include_router(chats_router)
 
 @app.post("/corregir")
 def corregir(datos: TextoEntrada):
