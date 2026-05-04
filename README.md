@@ -6,7 +6,7 @@ Corrector ortográfico y gramatical inteligente con IA local. Analiza textos en 
 
 ## Vista previa
 
-> 🚧 Proyecto en desarrollo activo — `v0.6.1`
+> 🚧 Proyecto en desarrollo activo — `v0.6.2`
 
 ---
 
@@ -17,6 +17,7 @@ Corrector ortográfico y gramatical inteligente con IA local. Analiza textos en 
 - Pipeline de corrección multicapa con 9 etapas de procesamiento
 - Protección de términos técnicos y anglicismos (tech guard)
 - Detección de homófonos contextuales (has/haz/as, sino/si no, de/dé)
+- Tildes diacríticas con análisis de contexto N-gram (él/el, más/mas, sé/se, sí/si)
 - Reconocimiento de nombres propios ambiguos por estructura gramatical (NER)
 - Score de escritura con porcentaje y nivel de calidad
 - Indicadores visuales de qué cambió y por qué
@@ -77,7 +78,7 @@ replace_slang       → xq → porque
 normalize           → limpieza de espacios y saltos de línea
 proteger_tecnicos   → deploy → TECH_0
 correct_spelling    → LanguageTool filtrado
-correct_grammar     → tildes, homófonos, puntuación
+correct_grammar     → tildes N-gram, homófonos, puntuación
 restaurar_tecnicos  → TECH_0 → deploy
 resolver_homofonos  → has/haz/as, de/dé, sino/si no
 capitalizar_NER     → rosa (sujeto) → Rosa
@@ -116,6 +117,7 @@ finalize_text       → mayúsculas y punto final
 | v0.5.0 | Score de escritura e indicadores de cambios |
 | v0.6.0 | Errores marcados en burbuja del usuario |
 | v0.6.1 | NER, tech guard, homófonos y correcciones avanzadas |
+| v0.6.2 | Tildes diacríticas con N-grams, bloqueadores y look-ahead de pronombres |
 
 ---
 
