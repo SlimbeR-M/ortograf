@@ -6,7 +6,7 @@ Corrector ortográfico y gramatical inteligente con IA local. Analiza textos en 
 
 ## Vista previa
 
-> 🚧 Proyecto en desarrollo activo — `v0.6.2`
+> 🚧 Proyecto en desarrollo activo — `v0.6.1`
 
 ---
 
@@ -22,6 +22,8 @@ Corrector ortográfico y gramatical inteligente con IA local. Analiza textos en 
 - Score de escritura con porcentaje y nivel de calidad
 - Indicadores visuales de qué cambió y por qué
 - Diseño oscuro y moderno, responsive para móvil y desktop
+- Autenticación de usuarios con registro, login y recuperación de contraseña
+- Historial de conversaciones persistente por usuario con base de datos SQLite
 
 ---
 
@@ -103,6 +105,9 @@ finalize_text       → mayúsculas y punto final
 | language-tool-python | 3.3.0 | Detección de errores ortográficos y gramaticales |
 | spacy | 3.8.13 | NER y análisis de dependencias gramaticales |
 | es-core-news-md | 3.8.0 | Modelo de español para spaCy |
+| sqlalchemy | 2.0.49 | ORM para base de datos SQLite |
+| bcrypt | 5.0.0 | Encriptación de contraseñas |
+| python-jose | 3.5.0 | Tokens JWT para autenticación |
 
 ---
 
@@ -118,6 +123,8 @@ finalize_text       → mayúsculas y punto final
 | v0.6.0 | Errores marcados en burbuja del usuario |
 | v0.6.1 | NER, tech guard, homófonos y correcciones avanzadas |
 | v0.6.2 | Tildes diacríticas con N-grams, bloqueadores y look-ahead de pronombres |
+| v0.7.0 | Autenticación de usuarios (registro, login, recuperación) |
+| v0.7.1 | Historial de conversaciones persistente con SQLite |
 
 ---
 
