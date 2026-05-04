@@ -54,6 +54,12 @@ backend/
     │   ├── slang_dict.json          # Diccionario de jerga
     │   ├── semantic_map.json        # Mapa semántico
     │   └── tech_whitelist.json      # Términos técnicos protegidos
+    ├── db/
+    │   ├── database.py              # Conexión SQLite
+    │   └── models.py                # Modelos Usuario, Chat, Mensaje
+    ├── routes/
+    │   ├── auth.py                  # Endpoints de autenticación
+    │   └── chats.py                 # Endpoints de historial
     └── services/
         ├── pipeline.py              # Orquestador principal
         ├── normalize.py             # Limpieza de texto
