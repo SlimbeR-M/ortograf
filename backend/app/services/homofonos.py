@@ -82,21 +82,29 @@ def resolver_homofonos(text: str) -> str:
 
         # ── mas / más ─────────────────────────────────────────────────────
         if tok_lower == "mas":
-            # Si puede sustituirse por "pero" → conjunción adversativa → sin tilde
-            # Detectar: si el token anterior es verbo/adj/adv y el siguiente también
-            anterior = tokens[i - 1] if i > 0 else None
             siguiente = tokens[i + 1] if i + 1 < len(tokens) else None
+            sig_lower = siguiente.text.lower() if siguiente else ""
 
-            es_adversativo = (
-                anterior and anterior.pos_ in ["VERB", "ADJ", "ADV", "NOUN"] and
-                siguiente and siguiente.pos_ in ["VERB", "ADJ", "ADV", "NOUN", "PRON"]
-            )
+            # Bloqueadores explícitos — nunca tildar si sigue uno de estos
+            BLOQUEADORES = {
+                "no", "ni", "nunca", "jamás", "tampoco", "pudo", "quiso",
+                "quiere", "quería", "sabía", "sabe", "puede", "podía",
+                "fue", "era", "es", "son", "hay", "tiene", "tenía",
+                "pero", "sino", "aunque", "sin", "embargo", "que", "si",
+                "se", "me", "te", "le", "lo", "la", "nos", "vale",
+                "dijo", "llegó",
+            }
 
-            if not es_adversativo:
-                # Es adverbio comparativo → necesita tilde
+            if sig_lower in BLOQUEADORES:
+                continue  # conjunción adversativa → no tildar
+
+            # Solo tildar si siguiente es ADJ o NUM (más grande, más 5)
+            PERMITIDOS_POS = {"ADJ", "NUM"}
+            if siguiente and siguiente.pos_ in PERMITIDOS_POS:
                 inicio = token.idx
                 fin = inicio + len(token.text)
-                resultado[inicio:fin] = list("más")
+                nuevo = "más" if token.text[0].islower() else "Más"
+                resultado[inicio:fin] = list(nuevo)
         
         # ── de / dé ───────────────────────────────────────────────────────
         if tok_lower == "de":

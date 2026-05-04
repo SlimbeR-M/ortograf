@@ -43,29 +43,39 @@ def correct_spelling(text: str) -> str:
         fragmento = text[m.offset:m.offset + m.error_length]
         frag_lower = fragmento.lower()
 
-        # Regla 1: ignorar placeholders
+        # Ignorar placeholders
         if PLACEHOLDER_PATTERN.search(fragmento):
             continue
 
-        # Regla 2: palabras cortas protegidas explícitamente
+        # Bloquear tildes diacríticas — las maneja grammar.py con contexto
+        TILDES_DIACRITICAS = {
+            ("el", "él"),
+            ("mas", "más"),
+            ("esta", "está"),
+            ("tu", "tú"),
+            ("se", "sé"),
+            ("si", "sí"),
+            ("de", "dé"),
+            ("te", "té"),
+            ("aun", "aún"),
+        }
+        if m.replacements:
+            par = (frag_lower, m.replacements[0].lower())
+            if par in TILDES_DIACRITICAS:
+                continue
+
+        # Ignorar palabras cortas protegidas
         if frag_lower in PALABRAS_CORTAS_PROTEGIDAS:
             continue
 
-        # Regla 3: palabras cortas (menos de 4 letras) con raíz técnica
         if len(fragmento) < 4 and _tiene_raiz_tecnica(fragmento):
             continue
 
-        # Regla 4: verbos técnicos por morfología
         if _es_verbo_tecnico(fragmento):
             continue
 
-        # Regla 5: raíz técnica con cambio drástico
         if _tiene_raiz_tecnica(fragmento) and m.replacements:
-            sim = SequenceMatcher(
-                None,
-                frag_lower,
-                m.replacements[0].lower()
-            ).ratio()
+            sim = SequenceMatcher(None, frag_lower, m.replacements[0].lower()).ratio()
             if sim < 0.80:
                 continue
 
