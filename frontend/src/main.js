@@ -106,9 +106,11 @@ buttonText.addEventListener("click", async() => {
 
     // Score del usuario
     if (datos.score) {
-        const color = datos.score.porcentaje >= 75 ? '#4caf50' : datos.score.porcentaje >= 50 ? '#ff9800' : '#f44336'
-        html += `<div class="message__score" style="color:${color}">
-            <span>✏️ Escritura: ${datos.score.porcentaje}% — ${datos.score.nivel}</span>
+        const colorOrto = datos.score.ortografia.porcentaje >= 75 ? '#4caf50' : datos.score.ortografia.porcentaje >= 50 ? '#ff9800' : '#f44336'
+        const colorGram = datos.score.gramatica.porcentaje >= 75 ? '#4caf50' : datos.score.gramatica.porcentaje >= 50 ? '#ff9800' : '#f44336'
+        html += `<div class="message__score">
+            <span style="color:${colorOrto}">🔤 Ortografía: ${datos.score.ortografia.porcentaje}% — ${datos.score.ortografia.nivel}</span>
+            <span style="color:${colorGram}">📝 Gramática: ${datos.score.gramatica.porcentaje}% — ${datos.score.gramatica.nivel}</span>
         </div>`
     }
 
@@ -248,6 +250,10 @@ text.addEventListener('mouseleave', () => {
 });
 
 
+
+
+
+
 // ─── AUTH MODAL ───────────────────────────────────────────────────────────────
 
 const profileBtn = document.querySelector("#profile-btn");
@@ -334,6 +340,13 @@ document.querySelector("#login-submit").addEventListener("click", async () => {
         mostrarError(loginError, "Error al conectar con el servidor.");
     }
 });
+
+
+
+
+
+
+
 
 // Registro
 document.querySelector("#register-submit").addEventListener("click", async () => {
@@ -424,6 +437,13 @@ document.querySelector("#forgot-submit").addEventListener("click", async () => {
         mostrarError(forgotError, "Error al conectar con el servidor.");
     }
 });
+
+
+
+
+
+
+
 
 // ─── Funciones de sesión ─────────────────────────────────────────────────────
 
