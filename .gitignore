@@ -33,6 +33,8 @@ backend/**/*.pycs
 backend/**/__pycache__/
 backend/**/*.pyc
 backend/**/*.pyo
+backend/app/**/__pycache__/
+backend/app/**/*.pyc
 
 # Entorno virtual
 backend/venv/
