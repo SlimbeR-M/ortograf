@@ -8,5 +8,9 @@ with open(DATA_PATH, "r", encoding="utf-8") as f:
     SLANG = json.load(f)
 
 def replace_slang(text: str) -> str:
-    words = text.split()
-    return " ".join([SLANG.get(w.lower(), w) for w in words])
+    parrafos = text.split('\n')
+    resultado = []
+    for parrafo in parrafos:
+        words = parrafo.split()
+        resultado.append(" ".join([SLANG.get(w.lower(), w) for w in words]))
+    return '\n'.join(resultado)

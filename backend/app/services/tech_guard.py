@@ -12,12 +12,6 @@ PLACEHOLDER_PATTERN = re.compile(r'__TECH_\d+__')
 
 
 def _es_tecnica(palabra: str) -> bool:
-    """
-    Verifica si una palabra es técnica considerando:
-    1. Match exacto en whitelist
-    2. Plural automático: si termina en s/es, verifica la raíz
-    3. Palabra compuesta con guion: re-deployar, pre-build
-    """
     p = palabra.lower()
 
     # Match exacto
@@ -40,11 +34,6 @@ def _es_tecnica(palabra: str) -> bool:
 
 
 def proteger_tecnicos(text: str) -> tuple[str, dict]:
-    """
-    Protege palabras técnicas con placeholders.
-    Maneja palabras con guion como unidad: re-deployar
-    Separa correctamente la puntuación pegada.
-    """
     mapa = {}
     contador = [0]
 

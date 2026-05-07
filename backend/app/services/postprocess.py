@@ -2,6 +2,18 @@ import re
 
 
 def finalize_text(text: str) -> str:
+    parrafos = text.split('\n')
+    resultado = []
+    for parrafo in parrafos:
+        if not parrafo.strip():
+            resultado.append('')
+            continue
+        parrafo = _finalizar_parrafo(parrafo)
+        resultado.append(parrafo)
+    return '\n'.join(resultado)
+
+
+def _finalizar_parrafo(text: str) -> str:
     text = text.strip()
 
     # Proteger puntos suspensivos
@@ -17,15 +29,14 @@ def finalize_text(text: str) -> str:
     # Restaurar puntos suspensivos
     text = text.replace('__ELLIPSIS__', '...')
 
-    # CRÍTICO: eliminar coma SOLO cuando está pegada entre letras sin espacio
-    # "Estimado,s" → "Estimados"  |  "Estimados, compañeros" → sin cambio
+    # Eliminar coma pegada entre letras
     text = re.sub(
         r'([a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]),([a-zA-ZáéíóúüñÁÉÍÓÚÜÑ])',
         r'\1\2',
         text
     )
 
-    # Capitalizar primera letra saltando signos de apertura
+    # Capitalizar primera letra
     if text:
         i = 0
         while i < len(text) and text[i] in ('¡', '¿', ' '):

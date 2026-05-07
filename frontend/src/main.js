@@ -79,20 +79,33 @@ buttonText.addEventListener("click", async() => {
     icono.src = "/src/assets/cancelar.png";
     buttonText.disabled = false;
     const datos = await respuestaIA(texto)
+    
 
-    //Mostrar error en burbuja de usuario
+    // Mostrar errores en burbuja de usuario
     if (datos.cambios && datos.cambios.length > 0) {
-    let textoMarcado = texto.replace(/\n/g, '<br>')
-    datos.cambios.forEach(c => {
-        if (c.original && c.original.trim()) {
-            textoMarcado = textoMarcado.replace(
-                c.original,
-                `<span class="error-highlight">${c.original}</span>`
-            )
-        }
-    })
-    mensaje.querySelector('.message__bubble').innerHTML = textoMarcado
-}
+        const erroresSet = new Set(
+            datos.cambios
+                .filter(c => c.original && c.original.trim())
+                .map(c => c.original.toLowerCase())
+        )
+
+        // Dividir en tokens preservando espacios y saltos
+        const tokens = texto.split(/(\s+)/)
+        const resultado = tokens.map(token => {
+            // Si es espacio o salto, convertir \n a <br> y devolver
+            if (/^\s+$/.test(token)) {
+                return token.replace(/\n/g, '<br>')
+            }
+            // Limpiar puntuación para comparar
+            const limpio = token.replace(/[.,;:!?¡¿"'()]/g, '').toLowerCase()
+            if (erroresSet.has(limpio) || erroresSet.has(token.toLowerCase())) {
+                return `<span class="error-highlight">${token}</span>`
+            }
+            return token
+        })
+
+        mensaje.querySelector('.message__bubble').innerHTML = resultado.join('')
+    }
 
     if(cancelado) {
         typing.remove();
@@ -548,7 +561,6 @@ function renderHistorial(chats) {
     });
 }
 
-// Cargar mensajes de un chat
 async function cargarChat(id) {
     try {
         const res = await fetch(`http://localhost:8000/chats/${id}`, {
@@ -558,21 +570,18 @@ async function cargarChat(id) {
 
         chatActualId = id;
         mensajesActuales = data.mensajes;
-
         chat.innerHTML = '';
         bienvenida.style.display = "none";
 
         data.mensajes.forEach(m => {
             const div = document.createElement("div");
-            div.className = `message message--${m.rol === "usuario" ? "user" : "ai"}`;
-            
             if (m.rol === "usuario") {
+                div.className = "message message--user";
                 div.innerHTML = `<p class="message__bubble">${m.contenido}</p>`;
             } else {
-                // La IA guarda el HTML completo con score y cambios
+                div.className = "message message--ai";
                 div.innerHTML = m.contenido;
             }
-            
             chat.appendChild(div);
         });
 
@@ -582,17 +591,17 @@ async function cargarChat(id) {
     }
 }
 
-// Guardar chat actual
-async function guardarChat(textoUsuario, textoIA) {
+async function guardarChat(textoUsuarioHTML, htmlIA) {
     if (!usuarioActual) return;
 
-    mensajesActuales.push({ rol: "usuario", contenido: textoUsuario });
-    mensajesActuales.push({ rol: "ia", contenido: textoIA });
+    // Guardar solo el innerHTML de la burbuja, sin el wrapper
+    mensajesActuales.push({ rol: "usuario", contenido: textoUsuarioHTML });
+    mensajesActuales.push({ rol: "ia", contenido: htmlIA });
 
-    const titulo = textoUsuario.replace(/<[^>]*>/g, '').slice(0, 40) || "Nuevo chat";
+    // Título: texto plano sin etiquetas HTML
+    const titulo = textoUsuarioHTML.replace(/<[^>]*>/g, '').slice(0, 40) || "Nuevo chat";
 
     if (chatActualId) {
-        // Chat ya existe — actualizar (por ahora recrear)
         await eliminarChat(chatActualId, false);
     }
 

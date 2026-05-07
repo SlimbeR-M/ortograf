@@ -54,6 +54,15 @@ VERBOS_3RA = {
     "entienda", "comprenda", "vea", "note", "observe",
     "recuerde", "olvide", "decida", "elija", "acepte",
     "rechace", "apruebe", "firme", "pague", "cobre",
+    "ayudó", "ayudo", "comentó", "comento", "notó", "noto",
+    "explicó", "explico", "entendió", "entendio", "terminó", "termino",
+    "continuó", "continuo", "empezó", "empezo", "comenzó", "comenzo",
+    "sabia", "podia", "queria", "tenia", "venia", "habia",
+    "entendia", "conocia", "vivia", "trabajaba", "estudiaba",
+    "sabia", "podia", "queria", "tenia", "venia", "habia",
+    "entendia", "conocia", "vivia", "trabajaba", "estudiaba",
+    "ayudó", "ayudo", "comentó", "comento", "notó", "noto",
+    "explicó", "explico", "entendió", "entendio", "terminó", "termino",
 }
 
 VERBOS_2DA = {
@@ -153,6 +162,11 @@ def _tildar(original: str, sin_tilde: str, con_tilde: str) -> str:
 
 
 def _aplicar_tildes_ngram(text: str) -> str:
+    parrafos = text.split('\n')
+    return '\n'.join(_procesar_parrafo_ngram(p) for p in parrafos)
+
+
+def _procesar_parrafo_ngram(text: str) -> str:
     palabras = text.split()
     cambios = []
 
@@ -174,100 +188,69 @@ def _aplicar_tildes_ngram(text: str) -> str:
             len(prefijo): len(palabra) - len(sufijo) if sufijo else len(palabra)
         ]
 
-        # ── mas / más ─────────────────────────────────────────────────────
         if nucleo == "mas":
-            # Bloqueador → salir inmediatamente
             if sig in MAS_BLOQUEADORES or palabra.endswith(","):
                 continue
-
-            # Solo tildar si explícitamente permitido
             if sig not in MAS_ADJETIVOS_GRADO and \
                sig not in MAS_SUSTANTIVOS_CANTIDAD and \
                not sig.isdigit():
                 continue
-
             cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
 
-        # ── el / él ───────────────────────────────────────────────────────
         elif nucleo == "el":
-            # LOOK-AHEAD: clítico + verbo → pronombre → tildar
-            # Esta regla va PRIMERO, antes del bloqueo de minúsculas
             if sig in CLITICOS and (
-                dos_sig in VERBOS_3RA or
-                dos_sig in VERBOS_2DA or
-                tres_sig in VERBOS_3RA or
-                tres_sig in VERBOS_2DA
+                dos_sig in VERBOS_3RA or dos_sig in VERBOS_2DA or
+                tres_sig in VERBOS_3RA or tres_sig in VERBOS_2DA
             ):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
-
-            # "el se queja", "el se va" → se + verbo → pronombre
             if sig == "se" and dos_sig in VERBOS_3RA | VERBOS_2DA:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
-
-            # Verbo de 3ra directo → pronombre
             if sig in VERBOS_3RA:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
-
-            # Negación + verbo → pronombre
             if sig in {"no", "ni", "nunca", "jamás"} and dos_sig in VERBOS_3RA:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
-
-            # Todo lo demás → artículo → no tildar
             continue
 
-        # ── esta / está y este / esté ─────────────────────────────────────
         elif nucleo in ("esta", "este"):
             sin_t = nucleo
             con_t = "está" if nucleo == "esta" else "esté"
-
-            if sig in PREPOSICIONES_LUGAR:
-                cambios.append((i, prefijo + _tildar(nucleo_orig, sin_t, con_t) + sufijo))
-            elif sig in ADJETIVOS_COMUNES:
-                cambios.append((i, prefijo + _tildar(nucleo_orig, sin_t, con_t) + sufijo))
-            elif sig in INTENSIFICADORES:
-                cambios.append((i, prefijo + _tildar(nucleo_orig, sin_t, con_t) + sufijo))
-            elif sig in VERBOS_3RA | VERBOS_2DA:
+            es_gerundio = bool(re.search(r'\w+(?:ando|iendo)$', sig))
+            if sig in PREPOSICIONES_LUGAR or \
+               sig in ADJETIVOS_COMUNES or \
+               sig in INTENSIFICADORES or \
+               sig in VERBOS_3RA | VERBOS_2DA or \
+               es_gerundio:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, sin_t, con_t) + sufijo))
 
-        # ── tu / tú ───────────────────────────────────────────────────────
         elif nucleo == "tu":
             if sig in VERBOS_2DA:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "tu", "tú") + sufijo))
 
-        # ── si / sí ───────────────────────────────────────────────────────
         elif nucleo == "si":
-            # "sí" afirmación cuando sigue verbo o va solo
             AFIRMACION_CONTEXTO = VERBOS_3RA | VERBOS_2DA | {"vaya", "viene", "claro"}
             if sig in AFIRMACION_CONTEXTO:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
-            # "sí" reflexivo: "él mismo", precedido de pronombre
             anterior_raw = palabras[i - 1] if i > 0 else ""
             anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
             if anterior in {"para", "por", "en", "de", "a"} and sig in CLITICOS | {"mismo", "misma"}:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
 
-        # ── se / sé ───────────────────────────────────────────────────────
         elif nucleo == "se":
             anterior_raw = palabras[i - 1] if i > 0 else ""
             anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
-
-            # "no sé si" → sé verbo saber
             if anterior in {"no", "nunca", "jamás"} and sig == "si":
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
                 continue
-
-            # "sé" antes de infinitivo
             if bool(re.search(r'\w+(?:ar|er|ir)$', sig)):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
                 continue
 
-        # ── cual / cuál ───────────────────────────────────────────────────
         elif nucleo == "cual":
             tiene_interrogacion = "?" in text or "¿" in text
             tokens_lista = [re.sub(r'[^a-záéíóúüñ]', '', p.lower()) for p in palabras]
@@ -276,14 +259,11 @@ def _aplicar_tildes_ngram(text: str) -> str:
             if tiene_interrogacion or tiene_verbo_pregunta:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "cual", "cuál") + sufijo))
 
-        # ── aun / aún ─────────────────────────────────────────────────────
         elif nucleo == "aun":
             if (sig in VERBOS_3RA or sig in VERBOS_2DA or
-                    sig in VERBOS_TIEMPO or
-                    sig in {"no", "ni", "nunca"}):
+                    sig in VERBOS_TIEMPO or sig in {"no", "ni", "nunca"}):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "aun", "aún") + sufijo))
 
-    # Aplicar cambios — operación aislada por índice
     resultado = palabras[:]
     for idx, nueva in cambios:
         resultado[idx] = nueva
