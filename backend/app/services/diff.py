@@ -2,10 +2,6 @@ import difflib
 
 
 def calcular_cambios(original: str, corregido: str) -> list:
-    """
-    Compara el texto original con el corregido y retorna
-    una lista de cambios con explicación de cada uno.
-    """
     palabras_orig = original.split()
     palabras_corr = corregido.split()
 
@@ -42,22 +38,36 @@ def calcular_cambios(original: str, corregido: str) -> list:
     return cambios
 
 
-def _explicar_cambio(original: str, corregido: str) -> str:
-    """Genera una explicación legible del cambio realizado."""
-    orig_l = original.lower()
-    corr_l = corregido.lower()
+def _normalizar(texto: str) -> str:
+    return texto.lower()\
+        .replace("á","a").replace("é","e").replace("í","i")\
+        .replace("ó","o").replace("ú","u").replace("ü","u")\
+        .replace("ñ","n")
 
-    # Tildes
-    if orig_l == corr_l.replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").replace("ü","u"):
+
+def _explicar_cambio(original: str, corregido: str) -> str:
+    PUNTUACION = set(".,;:¿?¡!\"'")
+    orig_sin_punt = ''.join(c for c in original if c not in PUNTUACION)
+    corr_sin_punt = ''.join(c for c in corregido if c not in PUNTUACION)
+
+    solo_puntuacion = (orig_sin_punt.lower() == corr_sin_punt.lower() and
+                       orig_sin_punt == corr_sin_punt)
+
+    if solo_puntuacion and original != corregido:
+        return f"Puntuación: '{original}' → '{corregido}'"
+
+    orig_l = original.lower().strip(".,;:¿?¡!")
+    corr_l = corregido.lower().strip(".,;:¿?¡!")
+    orig_sin = _normalizar(original).strip(".,;:¿?¡!")
+    corr_sin = _normalizar(corregido).strip(".,;:¿?¡!")
+
+    if orig_l == corr_l and original != corregido:
+        return f"Mayúscula: '{original}' debe escribirse '{corregido}'"
+
+    if orig_sin == corr_sin and orig_l != corr_l:
         return f"Tilde: '{original}' debe escribirse '{corregido}'"
 
-    # Mayúscula
-    if orig_l == corr_l:
-        return f"Mayúscula: '{original}' debe ser '{corregido}'"
+    if orig_sin == corr_sin and original != corregido:
+        return f"Tilde y mayúscula: '{original}' debe escribirse '{corregido}'"
 
-    # Puntuación
-    if orig_l.replace(",","").replace(".","").replace("¿","").replace("?","") == corr_l.replace(",","").replace(".","").replace("¿","").replace("?",""):
-        return f"Puntuación corregida: '{original}' → '{corregido}'"
-
-    # Ortografía general
     return f"Ortografía: '{original}' se escribe '{corregido}'"

@@ -63,6 +63,21 @@ VERBOS_3RA = {
     "entendia", "conocia", "vivia", "trabajaba", "estudiaba",
     "ayudó", "ayudo", "comentó", "comento", "notó", "noto",
     "explicó", "explico", "entendió", "entendio", "terminó", "termino",
+    "tome", "tomé", "comí", "comi", "fui", "vine", "llegué", "llegue",
+    "salí", "sali", "entré", "entre", "subí", "subi", "bajé", "baje",
+    "tomé", "tome", "llegué", "llegue", "comí", "comi",
+    "salí", "sali", "bañé", "bane", "dormí", "dormi",
+    "fuí", "fui", "vine", "viné", "traje", "trajé",
+    "puse", "pusé", "tuve", "tuvé", "hice", "hicé",
+    "dije", "dijé", "quise", "quisé", "pude", "pudé",
+    "supe", "supé", "anduve", "anduvé", "estuve", "estuvé",
+    "comió", "comio", "llegó", "llego", "salió", "salio",
+    "tomó", "tomo", "durmió", "durmio", "vino", "viño",
+    "trajo", "puso", "tuvo", "hizo", "dijo", "quiso",
+    "pudo", "supo", "anduvo", "estuvo", "habló", "hablo",
+    "escribió", "escribio", "leyó", "leyo", "corrió", "corrio",
+    "abrió", "abrio", "cerró", "cerro", "empezó", "empezo",
+    "terminó", "termino", "llamó", "llamo", "preguntó", "pregunto",
 }
 
 VERBOS_2DA = {
@@ -75,6 +90,21 @@ VERBOS_TIEMPO = {
     "es", "era", "fue", "será", "siendo", "ha", "había",
     "hizo", "hace", "hacía", "sigue", "seguía", "continúa",
     "queda", "quedó", "resulta", "resultó"
+}
+
+VERBOS_PASADO_1RA = {
+    "llegue": "llegué", "hable": "hablé", "camine": "caminé",
+    "maneje": "manejé", "viaje": "viajé", "trabaje": "trabajé",
+    "estudie": "estudié", "compre": "compré",
+    "saque": "saqué", "busque": "busqué", "toque": "toqué",
+    "entregue": "entregué", "explique": "expliqué",
+    "practique": "practiqué", "platique": "platiqué",
+    "empece": "empecé", "comence": "comencé",
+    "almorce": "almorcé", "regrese": "regresé", "termine": "terminé",
+    "tome": "tomé", "cene": "cené", "desayune": "desayuné",
+    "corre": "corrí", "subi": "subí", "baje": "bajé",
+    "entre": "entré", "sali": "salí", "llegue": "llegué",
+    "pague": "pagué", "juegue": "jugué",
 }
 
 PREPOSICIONES_LUGAR = {
@@ -322,6 +352,22 @@ def correct_grammar(text: str) -> str:
         lambda m: ', ' + m.group(1),
         text
     )
+
+    # 5.5 Verbos en pasado primera persona sin tilde
+    BLOQUEADORES_SUBJ = {"que", "para", "cuando", "si", "aunque", "espero", "quiero", "ojalá"}
+    palabras = text.split()
+    resultado = []
+    for j, palabra in enumerate(palabras):
+        nucleo = _limpiar_nucleo(palabra)
+        anterior = _limpiar_nucleo(palabras[j-1]) if j > 0 else ""
+        if nucleo in VERBOS_PASADO_1RA and anterior not in BLOQUEADORES_SUBJ:
+            corregido = VERBOS_PASADO_1RA[nucleo]
+            if palabra[0].isupper():
+                corregido = corregido[0].upper() + corregido[1:]
+            resultado.append(corregido)
+        else:
+            resultado.append(palabra)
+    text = " ".join(resultado)
 
     # 6. Tildes por N-grams
     text = _aplicar_tildes_ngram(text)

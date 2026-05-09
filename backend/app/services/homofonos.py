@@ -22,71 +22,63 @@ def resolver_homofonos(text: str) -> str:
     doc = nlp(text)
     tokens = list(doc)
     resultado = list(text)
-    offset_acum = 0
 
     for i, token in enumerate(tokens):
         tok_lower = token.text.lower()
+        siguiente = tokens[i + 1] if i + 1 < len(tokens) else None
+        anterior = tokens[i - 1] if i > 0 else None
+        dos_sig = tokens[i + 2] if i + 2 < len(tokens) else None
+        dos_antes = tokens[i - 2] if i > 1 else None
 
-        # ── se (pronombre) nunca lleva tilde si va seguido de verbo/clítico ─
-        if token.text == "sé" or token.text == "Sé":
-            siguiente = tokens[i + 1] if i + 1 < len(tokens) else None
+        sig_lower = siguiente.text.lower() if siguiente else ""
+        sig_pos = siguiente.pos_ if siguiente else ""
+
+        # ── se → revertir tilde si va seguido de verbo/clítico ──────────
+        if token.text in ("sé", "Sé"):
             if siguiente:
-                # Si sigue verbo o clítico → revertir tilde
                 clíticos = {"me", "te", "le", "lo", "la", "les", "los",
                             "las", "nos", "os", "se", "de", "fue",
                             "cayó", "dio", "puso", "hizo"}
-                if (siguiente.pos_ in ["VERB", "AUX"] or
-                        siguiente.text.lower() in clíticos):
+                if sig_pos in ["VERB", "AUX"] or sig_lower in clíticos:
                     inicio = token.idx
                     fin = inicio + len(token.text)
                     sin_tilde = "se" if token.text[0].islower() else "Se"
                     resultado[inicio:fin] = list(sin_tilde)
 
-        # ── has / as / haz ────────────────────────────────────────────────
-        if tok_lower in ["as", "has", "haz"]:
-            siguiente = tokens[i + 1] if i + 1 < len(tokens) else None
-            dos_sig = tokens[i + 2] if i + 2 < len(tokens) else None
-
+        # ── has / as / haz ───────────────────────────────────────────────
+        elif tok_lower in ["as", "has", "haz"]:
             correcto = None
-
             if siguiente:
-                sig_lower = siguiente.text.lower()
-                # Has: seguido de participio (-ado, -ido, -to, -so, -cho)
                 if re.search(r'(ado|ido|to|so|cho)$', sig_lower):
                     correcto = "has"
-                # Has: seguido de "de" + infinitivo
                 elif sig_lower == "de" and dos_sig and re.search(r'(ar|er|ir)$', dos_sig.text.lower()):
                     correcto = "has"
-                # Haz: verbo hacer en imperativo
-                elif siguiente.pos_ in ["NOUN", "PROPN", "DET"]:
+                elif sig_pos in ["NOUN", "PROPN", "DET"]:
                     correcto = "haz"
-                # As: sustantivo (carta, experto)
-                elif siguiente.pos_ in ["ADP", "VERB"] and tok_lower == "as":
+                elif sig_pos in ["ADP", "VERB"] and tok_lower == "as":
                     correcto = "as"
-
             if correcto and correcto != tok_lower:
                 inicio = token.idx
                 fin = inicio + len(token.text)
                 nuevo = correcto if token.text[0].islower() else correcto.capitalize()
                 resultado[inicio:fin] = list(nuevo)
 
-        # ── hazar / asar ─────────────────────────────────────────────────
-        if tok_lower in ["hazar", "azar"] and tok_lower != "azar":
-            # Verificar contexto de cocina en ventana de 5 tokens
-            ventana = [t.text.lower() for t in tokens[max(0, i-3):i+4]]
-            if any(w in LEXICO_COCINA for w in ventana):
+        # ── aun / aún ────────────────────────────────────────────────────
+        elif tok_lower == "aun":
+            # "aún" = todavía → sigue verbo, adverbio o negación
+            # "aun" = incluso → no tildar (aun cuando, aun si, aun así)
+            BLOQUEADORES_AUN = {"cuando", "si", "siendo", "habiendo", "a", "con"}
+            if sig_lower in BLOQUEADORES_AUN:
+                pass  # es "incluso" → no tildar
+            elif sig_pos in ["VERB", "AUX", "ADV"] or sig_lower in {"no", "ni", "más", "mas"}:
                 inicio = token.idx
                 fin = inicio + len(token.text)
-                nuevo = "asar" if token.text[0].islower() else "Asar"
+                nuevo = "aún" if token.text[0].islower() else "Aún"
                 resultado[inicio:fin] = list(nuevo)
 
-        # ── mas / más ─────────────────────────────────────────────────────
-        if tok_lower == "mas":
-            siguiente = tokens[i + 1] if i + 1 < len(tokens) else None
-            sig_lower = siguiente.text.lower() if siguiente else ""
-
-            # Bloqueadores explícitos — nunca tildar si sigue uno de estos
-            BLOQUEADORES = {
+        # ── mas / más ────────────────────────────────────────────────────
+        elif tok_lower == "mas":
+            BLOQUEADORES_MAS = {
                 "no", "ni", "nunca", "jamás", "tampoco", "pudo", "quiso",
                 "quiere", "quería", "sabía", "sabe", "puede", "podía",
                 "fue", "era", "es", "son", "hay", "tiene", "tenía",
@@ -94,37 +86,25 @@ def resolver_homofonos(text: str) -> str:
                 "se", "me", "te", "le", "lo", "la", "nos", "vale",
                 "dijo", "llegó",
             }
-
-            if sig_lower in BLOQUEADORES:
-                continue  # conjunción adversativa → no tildar
-
-            # Solo tildar si siguiente es ADJ o NUM (más grande, más 5)
-            PERMITIDOS_POS = {"ADJ", "NUM"}
-            if siguiente and siguiente.pos_ in PERMITIDOS_POS:
+            if sig_lower in BLOQUEADORES_MAS:
+                pass  # conjunción → no tildar
+            elif sig_pos in ["ADJ", "ADV", "NUM"]:
                 inicio = token.idx
                 fin = inicio + len(token.text)
                 nuevo = "más" if token.text[0].islower() else "Más"
                 resultado[inicio:fin] = list(nuevo)
-        
-        # ── de / dé ───────────────────────────────────────────────────────
-        if tok_lower == "de":
-            anterior = tokens[i - 1] if i > 0 else None
-            siguiente = tokens[i + 1] if i + 1 < len(tokens) else None
 
+        # ── de / dé ──────────────────────────────────────────────────────
+        elif tok_lower == "de":
             CLÍTICOS = {"que", "me", "le", "les", "nos", "te", "se", "no"}
-
             es_imperativo = (
                 anterior and anterior.text.lower() in CLÍTICOS and
-                siguiente and siguiente.pos_ in ["NOUN", "DET", "PRON", "ADJ"]
+                siguiente and sig_pos in ["NOUN", "DET", "PRON", "ADJ"]
             )
-
-            # Casos extra: "se dé cuenta", "no me dé"
-            dos_antes = tokens[i - 2] if i > 1 else None
             es_reflexivo = (
                 anterior and anterior.text.lower() in {"se", "me", "te", "nos"} and
                 dos_antes and dos_antes.text.lower() in {"que", "no", "nunca", "jamás"}
             )
-
             if es_imperativo or es_reflexivo:
                 inicio = token.idx
                 fin = inicio + len(token.text)
