@@ -8,6 +8,8 @@ from app.services.diff import calcular_cambios
 from app.services.tech_guard import proteger_tecnicos, restaurar_tecnicos
 from app.services.ner import capitalizar_entidades
 from app.services.homofonos import resolver_homofonos
+from app.services.correcciones import aplicar_correcciones_forzadas
+
 
 
 def correct_text(text: str):
@@ -15,6 +17,7 @@ def correct_text(text: str):
 
     # 1. Slang primero — antes de cualquier análisis
     text = replace_slang(text)
+    text = aplicar_correcciones_forzadas(text)
 
     # 2. Normalización
     text = normalize(text)

@@ -16,6 +16,30 @@ LEXICO_COCINA = {
     "pimienta", "salsa", "guiso", "estofado", "asado"
 }
 
+LEXICO_VIOLENCIA = {
+    "golpeó", "golpeo", "tiró", "tiro", "lanzó", "lanzo", "empujó",
+    "empujo", "atacó", "ataco", "agredió", "agredio", "pegó", "pego",
+    "disparó", "disparo", "amenazó", "huyó", "huyo", "persiguió",
+    "piedra", "objeto", "botella", "palo", "golpe", "puñetazo",
+    "patada", "balazo", "cuchillo", "arma", "proyectil", "roca"
+}
+
+LEXICO_NATURALEZA = {
+    "río", "rio", "agua", "orilla", "corriente", "arroyo", "riachuelo",
+    "lago", "laguna", "manantial", "cauce", "afluente", "caudal"
+}
+
+LEXICO_DESTRUCCION = {
+    "rota", "roto", "dañada", "dañado", "destruida", "destruido",
+    "valla", "puerta", "ventana", "pared", "techo", "muro", "cerca",
+    "deteriorada", "deteriorado", "vieja", "viejo", "caída", "caido"
+}
+
+LEXICO_ELIMINACION = {
+    "basura", "residuos", "desperdicios", "tira", "bota", "elimina",
+    "descarta", "rechaza", "ignora", "desestima", "abandona"
+}
+
 
 def resolver_homofonos(text: str) -> str:
     nlp = get_nlp()
@@ -109,5 +133,36 @@ def resolver_homofonos(text: str) -> str:
                 inicio = token.idx
                 fin = inicio + len(token.text)
                 resultado[inicio:fin] = list("dé")
+        
+        # ── arroyo / arrojó ──────────────────────────────────────────────
+        elif tok_lower == "arroyo":
+            ventana = [t.text.lower() for t in tokens[max(0, i-5):i+6]]
+            tiene_violencia = any(w in LEXICO_VIOLENCIA for w in ventana)
+            tiene_naturaleza = any(w in LEXICO_NATURALEZA for w in ventana)
+            if tiene_violencia and not tiene_naturaleza:
+                inicio = token.idx
+                fin = inicio + len(token.text)
+                nuevo = "arrojó" if token.text[0].islower() else "Arrojó"
+                resultado[inicio:fin] = list(nuevo)
+
+        # ── desecha / deshecha ───────────────────────────────────────────
+        if tok_lower == "arroyo":
+            ventana = [t.text.lower() for t in tokens[max(0, i-5):i+6] if t.i != token.i]
+            tiene_violencia = any(w in LEXICO_VIOLENCIA for w in ventana)
+            tiene_naturaleza = any(w in LEXICO_NATURALEZA for w in ventana)
+            if tiene_violencia and not tiene_naturaleza:
+                inicio = token.idx
+                fin = inicio + len(token.text)
+                nuevo = "arrojó" if token.text[0].islower() else "Arrojó"
+                resultado[inicio:fin] = list(nuevo)
+
+        # ── hacho / hecho ────────────────────────────────────────────────
+        elif tok_lower == "hacho":
+            anterior_lower = anterior.text.lower() if anterior else ""
+            if anterior_lower in {"se", "lo", "ha", "había", "haber", "fue"}:
+                inicio = token.idx
+                fin = inicio + len(token.text)
+                nuevo = "hecho" if token.text[0].islower() else "Hecho"
+                resultado[inicio:fin] = list(nuevo)
 
     return "".join(resultado)
