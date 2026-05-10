@@ -105,6 +105,16 @@ VERBOS_PASADO_1RA = {
     "corre": "corrí", "subi": "subí", "baje": "bajé",
     "entre": "entré", "sali": "salí", "llegue": "llegué",
     "pague": "pagué", "juegue": "jugué",
+    "informo": "informó", "presento": "presentó", "comento": "comentó",
+    "menciono": "mencionó", "indico": "indicó", "señalo": "señaló",
+    "anuncio": "anunció", "confirmo": "confirmó", "nego": "negó",
+    "acepto": "aceptó", "rechazo": "rechazó", "aprobo": "aprobó",
+    "propuso": "propuso", "decidio": "decidió", "eligio": "eligió",
+    "pidio": "pidió", "recibio": "recibió", "envio": "envió",
+    "llevo": "llevó", "trajo": "trajo", "volvio": "volvió",
+    "regreso": "regresó", "salio": "salió", "entro": "entró",
+    "subio": "subió", "bajo": "bajó", "abrio": "abrió",
+    "cerro": "cerró", "empezo": "empezó", "termino": "terminó",
 }
 
 PREPOSICIONES_LUGAR = {
