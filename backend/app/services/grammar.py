@@ -261,22 +261,42 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "tu", "tú") + sufijo))
 
         elif nucleo == "si":
+            anterior_raw = palabras[i - 1] if i > 0 else ""
+            anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
+
+            # Si va precedido de conjunción → es condicional → no tildar
+            CONJUNCIONES = {"pero", "aunque", "y", "o", "ni", "sino", 
+                           "porque", "como", "mas", "se", "sé", "que"}
+            if anterior in CONJUNCIONES:
+                continue
+
             AFIRMACION_CONTEXTO = VERBOS_3RA | VERBOS_2DA | {"vaya", "viene", "claro"}
             if sig in AFIRMACION_CONTEXTO:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
-            anterior_raw = palabras[i - 1] if i > 0 else ""
-            anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
+
             if anterior in {"para", "por", "en", "de", "a"} and sig in CLITICOS | {"mismo", "misma"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
+                continue
+            # "yo sí", "claro sí" → afirmación sin verbo siguiente
+            AFIRMACION_DIRECTA = {"yo", "claro", "pues", "bueno", "obvio"}
+            if anterior in AFIRMACION_DIRECTA:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
+                continue
+
+            # "sí lo", "sí me", "sí te" → afirmación con clítico
+            if sig in CLITICOS:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
 
         elif nucleo == "se":
             anterior_raw = palabras[i - 1] if i > 0 else ""
             anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
-            if anterior in {"no", "nunca", "jamás"} and sig == "si":
+
+            if anterior in {"no", "nunca", "jamás", "si", "sí", "yo", "lo"} and sig in {"si", "sí", "que", ""}:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
                 continue
+
             if bool(re.search(r'\w+(?:ar|er|ir)$', sig)):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
                 continue
