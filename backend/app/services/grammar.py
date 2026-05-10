@@ -115,6 +115,10 @@ VERBOS_PASADO_1RA = {
     "regreso": "regresó", "salio": "salió", "entro": "entró",
     "subio": "subió", "bajo": "bajó", "abrio": "abrió",
     "cerro": "cerró", "empezo": "empezó", "termino": "terminó",
+    "caso": "casó", "trabajo": "trabajó", "estudio": "estudió",
+    "busco": "buscó", "encontro": "encontró", "logro": "logró",
+    "trato": "trató", "hablo": "habló", "escucho": "escuchó",
+    "camino": "caminó", "manejo": "manejó", "viajo": "viajó",
 }
 
 PREPOSICIONES_LUGAR = {
@@ -384,17 +388,27 @@ def correct_grammar(text: str) -> str:
     )
 
     # 5.5 Verbos en pasado primera persona sin tilde
-    BLOQUEADORES_SUBJ = {"que", "para", "cuando", "si", "aunque", "espero", "quiero", "ojalá"}
+    BLOQUEADORES_SUBJ = {"que", "para", "cuando", "si", "aunque", 
+                         "espero", "quiero", "ojalá", "el", "un", 
+                         "la", "una", "mi", "tu", "su"}
+    AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio", 
+                "inicio", "termino", "aumento", "bajo", "paso"}
     palabras = text.split()
     resultado = []
     for j, palabra in enumerate(palabras):
         nucleo = _limpiar_nucleo(palabra)
         anterior = _limpiar_nucleo(palabras[j-1]) if j > 0 else ""
+        siguiente = _limpiar_nucleo(palabras[j+1]) if j + 1 < len(palabras) else ""
+        
         if nucleo in VERBOS_PASADO_1RA and anterior not in BLOQUEADORES_SUBJ:
-            corregido = VERBOS_PASADO_1RA[nucleo]
-            if palabra[0].isupper():
-                corregido = corregido[0].upper() + corregido[1:]
-            resultado.append(corregido)
+            # Para palabras ambiguas verificar que no sean sustantivos
+            if nucleo in AMBIGUOS and anterior in {"el", "un", "la", "una", "mi", "tu", "su", "este", "ese"}:
+                resultado.append(palabra)
+            else:
+                corregido = VERBOS_PASADO_1RA[nucleo]
+                if palabra[0].isupper():
+                    corregido = corregido[0].upper() + corregido[1:]
+                resultado.append(corregido)
         else:
             resultado.append(palabra)
     text = " ".join(resultado)
