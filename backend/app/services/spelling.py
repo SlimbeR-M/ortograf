@@ -79,6 +79,14 @@ def correct_spelling(text: str) -> str:
             if sim < 0.80:
                 continue
 
+        if m.replacements:
+            orig_sin_tilde = frag_lower.rstrip('eé')
+            remp_sin_tilde = m.replacements[0].lower().rstrip('aa')
+            if (frag_lower.endswith('e') and
+                m.replacements[0].lower().endswith('a') and
+                SequenceMatcher(None, frag_lower[:-1], m.replacements[0].lower()[:-1]).ratio() > 0.85):
+                continue
+
         matches_seguros.append(m)
 
     return language_tool_python.utils.correct(text, matches_seguros)
