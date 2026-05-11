@@ -388,9 +388,9 @@ def correct_grammar(text: str) -> str:
     )
 
     # 5.5 Verbos en pasado primera persona sin tilde
-    BLOQUEADORES_SUBJ = {"que", "para", "cuando", "si", "aunque", 
-                         "espero", "quiero", "ojalá", "el", "un", 
-                         "la", "una", "mi", "tu", "su"}
+    BLOQUEADORES_SUBJ = {"que", "para", "si", "aunque",
+                     "espero", "quiero", "ojalá", "el", "un",
+                     "la", "una", "mi", "tu", "su"}
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio", 
                 "inicio", "termino", "aumento", "bajo", "paso"}
     palabras = text.split()
