@@ -119,6 +119,20 @@ VERBOS_PASADO_1RA = {
     "camino": "caminó", "manejo": "manejó", "viajo": "viajó",
     "genero": "generó", "prepare": "preparé",
     "levante": "levanté", "desperte": "desperté",
+    "pregunto": "preguntó", "contesto": "contestó", "respondio": "respondió",
+    "conto": "contó", "explico": "explicó", "describio": "describió",
+    "proceso": "procesó", "mostro": "mostró", "calculo": "calculó",
+    "actualizo": "actualizó", "configuro": "configuró", "instalo": "instaló",
+    "probo": "probó", "gusto": "gustó", "transporto": "transportó",
+    "disgusto": "disgustó", "agrado": "agradó", "molesto": "molestó",
+    "sorprendio": "sorprendió", "asombro": "asombró", "impresiono": "impresionó",
+    "encanto": "encantó", "fascino": "fascinó", "intereso": "interesó",
+    "preocupo": "preocupó", "asusto": "asustó", "aburrio": "aburrió",
+    "canso": "cansó", "canso": "cansó", "emociono": "emocionó",
+    "aproveche": "aproveché", "convence": "convencí", "establece": "establecí",
+    "conoce": "conocí", "reconoce": "reconocí", "pertenece": "pertenecí",
+    "merece": "mereció", "obedece": "obedeció", "padece": "padeció",
+    "llego": "llegó", "aprobo": "aprobó", "aproveche": "aproveché",
 }
 
 PREPOSICIONES_LUGAR = {
@@ -393,16 +407,20 @@ def correct_grammar(text: str) -> str:
                      "la", "una", "mi", "tu", "su"}
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio", 
                 "inicio", "termino", "aumento", "bajo", "paso"}
+    FORZADORES_PASADO = {"él", "ella", "usted", "ellos", "ellas", "ustedes"}
     palabras = text.split()
     resultado = []
     for j, palabra in enumerate(palabras):
         nucleo = _limpiar_nucleo(palabra)
         anterior = _limpiar_nucleo(palabras[j-1]) if j > 0 else ""
+        anterior_orig = palabras[j-1] if j > 0 else ""
         siguiente = _limpiar_nucleo(palabras[j+1]) if j + 1 < len(palabras) else ""
-        
-        if nucleo in VERBOS_PASADO_1RA and anterior not in BLOQUEADORES_SUBJ:
-            # Para palabras ambiguas verificar que no sean sustantivos
-            if nucleo in AMBIGUOS and anterior in {"el", "un", "la", "una", "mi", "tu", "su", "este", "ese"}:
+
+        if nucleo in VERBOS_PASADO_1RA and (
+            anterior not in BLOQUEADORES_SUBJ or
+            anterior_orig in FORZADORES_PASADO
+        ):
+            if nucleo in AMBIGUOS and anterior in {"el", "un", "la", "una", "mi", "tu", "su"}:
                 resultado.append(palabra)
             else:
                 corregido = VERBOS_PASADO_1RA[nucleo]
