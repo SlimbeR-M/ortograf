@@ -164,5 +164,13 @@ def resolver_homofonos(text: str) -> str:
                 fin = inicio + len(token.text)
                 nuevo = "hecho" if token.text[0].islower() else "Hecho"
                 resultado[inicio:fin] = list(nuevo)
+        
+        # ── allá / haya ──────────────────────────────────────────────────
+        if tok_lower == "allá" or tok_lower == "alla":
+            if siguiente and re.search(r'(ado|ido|to|so|cho)$', sig_lower):
+                inicio = token.idx
+                fin = inicio + len(token.text)
+                nuevo = "haya" if token.text[0].islower() else "Haya"
+                resultado[inicio:fin] = list(nuevo)
 
     return "".join(resultado)

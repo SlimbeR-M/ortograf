@@ -1137,6 +1137,7 @@ HOMOFONOS_SIMPLES = {
     r'\bay\b(?! que)': 'hay',
     r'\bbaso\b': 'vaso',
     r'\bojala\b': 'ojalá',
+    r'\bah\b(?= ido| estado| sido| tenido| podido| querido| dicho| hecho)': 'ha',
 }
 
 
@@ -1225,6 +1226,10 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "tu", "tú") + sufijo))
 
         elif nucleo == "si":
+            # Si empieza oración o va con mayúscula → condicional → no tildar
+            if i == 0 or palabra[0].isupper():
+                continue
+            
             anterior_raw = palabras[i - 1] if i > 0 else ""
             anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
 
@@ -1343,7 +1348,7 @@ def correct_grammar(text: str) -> str:
 
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
                 "inicio", "termino", "aumento", "bajo",
-                "peso", "cobro", "monto", "noto"}
+                "peso", "cobro", "monto", "noto", "camino"}
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
                            "deseo", "llamo", "uso", "tomo", "como",
@@ -1404,7 +1409,9 @@ def correct_grammar(text: str) -> str:
             anterior not in bloqueadores_efectivos or
             anterior_orig in FORZADORES_PASADO
         ) and not anterior_es_futuro:
-            if nucleo in AMBIGUOS and anterior in {"el", "un", "la", "una", "mi", "tu", "su"}:
+            if nucleo in AMBIGUOS and anterior in {"el", "al", "un", "la", "una", 
+                                                    "mi", "tu", "su", "del", "este",
+                                                    "ese", "aquel", "su", "nuestro"}:
                 resultado.append(palabra)
             else:
                 corregido = VERBOS_PASADO_1RA[nucleo]
