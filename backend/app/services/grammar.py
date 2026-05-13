@@ -897,6 +897,8 @@ VERBOS_PASADO_1RA = {
     "fallo": "falló", "erro": "erró", "acerto": "acertó",
     "mejoro": "mejoró", "empeoro": "empeoró", "aumento": "aumentó",
     "disminuyo": "disminuyó", "subio": "subió", "bajo": "bajó",
+    "olvido": "olvidó", "marco": "marcó", "noto": "notó",
+    "peso": "pesó", "cobro": "cobró", "monto": "montó",
 }
 
 VERBOS_FUTURO = {
@@ -1335,25 +1337,73 @@ def correct_grammar(text: str) -> str:
         text
     )
 
-    # 5.5 Verbos en pasado primera persona sin tilde
+    # 5.5 Verbos en pasado sin tilde
     BLOQUEADORES_SUBJ = {"que", "para", "si", "aunque",
-                     "espero", "quiero", "ojalá", "el", "un",
-                     "la", "una", "mi", "tu", "su"}
-    AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio", 
-                "inicio", "termino", "aumento", "bajo", "paso"}
+                         "ojalá", "el", "un", "la", "una", "mi", "tu", "su"}
+
+    AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
+                "inicio", "termino", "aumento", "bajo",
+                "peso", "cobro", "monto", "noto"}
+
+    VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
+                           "deseo", "llamo", "uso", "tomo", "como",
+                           "bebo", "creo", "pienso", "siento", "digo",
+                           "hago", "voy", "vengo", "tengo", "puedo",
+                           "sé", "veo", "oigo", "pido", "sigo"}
+
     FORZADORES_PASADO = {"él", "ella", "usted", "ellos", "ellas", "ustedes"}
+
+    DETERMINANTES_RELATIVOS = {"lo", "el", "la", "los", "las", "todo", "algo", "nada"}
+
+    def _es_futuro(palabra: str) -> bool:
+        return bool(re.search(r'[áéíóú]$', palabra.lower()))
+
     palabras = text.split()
     resultado = []
     for j, palabra in enumerate(palabras):
         nucleo = _limpiar_nucleo(palabra)
         anterior = _limpiar_nucleo(palabras[j-1]) if j > 0 else ""
         anterior_orig = palabras[j-1] if j > 0 else ""
+        anterior_a_que = _limpiar_nucleo(palabras[j-2]) if j > 1 else ""
         siguiente = _limpiar_nucleo(palabras[j+1]) if j + 1 < len(palabras) else ""
+        anterior_es_futuro = _es_futuro(anterior_orig) if anterior_orig else False
+
+        # Verificar si "que" anterior es pronombre relativo
+        # ej: "todo lo que pasó", "algo que ocurrió"
+        que_es_relativo = (anterior == "que" and anterior_a_que in DETERMINANTES_RELATIVOS)
+
+        # Bloqueadores efectivos — si "que" es relativo, no bloquea
+        bloqueadores_efectivos = BLOQUEADORES_SUBJ - {"que"} if que_es_relativo else BLOQUEADORES_SUBJ
+
+        # Verbos presente primera persona — lógica especial
+        if nucleo in VERBOS_PRESENTE_1RA:
+            # Sigue "que" → presente → no tildar
+            if siguiente in {"que", "poder", "hacer", "ir", "venir", "ser", "estar"}:
+                resultado.append(palabra)
+                continue
+            # Inicio de oración o precedido de "yo" → presente → no tildar
+            if anterior in {"yo", ""} or j == 0:
+                resultado.append(palabra)
+                continue
+            # Precedido de pronombre sujeto o sustantivo → pasado → tildar
+            if anterior_orig in FORZADORES_PASADO or (
+                anterior not in {"y", "o", "pero", "aunque", "sino", "que",
+                                  "si", "porque", "como", "cuando", "donde"}
+                and len(anterior) > 2
+            ):
+                if nucleo in VERBOS_PASADO_1RA:
+                    corregido = VERBOS_PASADO_1RA[nucleo]
+                    if palabra[0].isupper():
+                        corregido = corregido[0].upper() + corregido[1:]
+                    resultado.append(corregido)
+                    continue
+            resultado.append(palabra)
+            continue
 
         if nucleo in VERBOS_PASADO_1RA and (
-            anterior not in BLOQUEADORES_SUBJ or
+            anterior not in bloqueadores_efectivos or
             anterior_orig in FORZADORES_PASADO
-        ):
+        ) and not anterior_es_futuro:
             if nucleo in AMBIGUOS and anterior in {"el", "un", "la", "una", "mi", "tu", "su"}:
                 resultado.append(palabra)
             else:
