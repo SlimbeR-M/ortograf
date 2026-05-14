@@ -105,6 +105,8 @@ MAS_SUSTANTIVOS_CANTIDAD = {
     "problemas", "errores", "fallas", "obstáculos", "retos", "desafíos",
     "ventajas", "beneficios", "oportunidades", "riesgos", "peligros",
     "cambios", "mejoras", "avances", "retrocesos", "diferencias",
+    "conciencia", "consciencia", "paciencia", "experiencia",
+    "presencia", "ausencia", "existencia", "resistencia",
 }
 
 MAS_ADJETIVOS_GRADO = {
@@ -899,6 +901,8 @@ VERBOS_PASADO_1RA = {
     "disminuyo": "disminuyó", "subio": "subió", "bajo": "bajó",
     "olvido": "olvidó", "marco": "marcó", "noto": "notó",
     "peso": "pesó", "cobro": "cobró", "monto": "montó",
+    "fije": "fijé", "respeto": "respetó", "noto": "notó",
+    "fixe": "fijé",
 }
 
 VERBOS_FUTURO = {
@@ -1222,6 +1226,13 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, sin_t, con_t) + sufijo))
 
         elif nucleo == "tu":
+            # "tú que", "tú quien" → siempre pronombre
+            if sig in {"que", "quien", "quién", "cual", "cuál"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "tu", "tú") + sufijo))
+                continue
+            if "?" in text or "¿" in text:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "tu", "tú") + sufijo))
+                continue
             if sig in VERBOS_2DA:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "tu", "tú") + sufijo))
 
@@ -1411,7 +1422,8 @@ def correct_grammar(text: str) -> str:
         ) and not anterior_es_futuro:
             if nucleo in AMBIGUOS and anterior in {"el", "al", "un", "la", "una", 
                                                     "mi", "tu", "su", "del", "este",
-                                                    "ese", "aquel", "su", "nuestro"}:
+                                                    "ese", "aquel", "nuestro", "de",
+                                                    "a", "por", "para", "con", "sin"}:
                 resultado.append(palabra)
             else:
                 corregido = VERBOS_PASADO_1RA[nucleo]
