@@ -983,6 +983,9 @@ VERBOS_FUTURO = {
     "dire": "diré", "ire": "iré", "vere": "veré",
     "hare": "haré", "sere": "seré", "estare": "estaré",
     "traere": "traeré", "cabre": "cabré", "valdre": "valdré",
+    "funcionara": "funcionará", "mejorara": "mejorará",
+    "cambiara": "cambiará", "crecera": "crecerá",
+    "avanzara": "avanzará", "desarrollara": "desarrollará",
 }
 
 PREPOSICIONES_LUGAR = {

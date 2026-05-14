@@ -10,20 +10,23 @@ with open(DATA_PATH, "r", encoding="utf-8") as f:
 
 
 def aplicar_correcciones_forzadas(text: str) -> str:
-    palabras = text.split('\n')
+    def _normalizar(palabra: str) -> str:
+        return palabra.lower()\
+            .replace("á","a").replace("é","e").replace("í","i")\
+            .replace("ó","o").replace("ú","u").replace("ü","u")
+
+    parrafos = text.split('\n')
     resultado = []
-    for parrafo in palabras:
+    for parrafo in parrafos:
         tokens = parrafo.split()
         tokens_corregidos = []
         for token in tokens:
-            # Limpiar puntuación para comparar
-            limpio = re.sub(r'^[¿¡\(\[\"\']+|[\)\]\"\'\.,:;!?]+$', '', token).lower()
-            if limpio in CORRECCIONES:
-                corregido = CORRECCIONES[limpio]
-                # Preservar casing
-                if token[0].isupper():
+            limpio = re.sub(r'^[¿¡\(\[\"\']+|[\)\]\"\'\.,:;!?]+$', '', token)
+            limpio_norm = _normalizar(limpio)
+            if limpio_norm in CORRECCIONES:
+                corregido = CORRECCIONES[limpio_norm]
+                if limpio[0].isupper():
                     corregido = corregido[0].upper() + corregido[1:]
-                # Preservar puntuación
                 prefijo = re.match(r'^([¿¡\(\[\"\']*)', token).group(1)
                 sufijo = re.search(r'([\)\]\"\'\.,:;!?]*)$', token).group(1)
                 tokens_corregidos.append(prefijo + corregido + sufijo)
