@@ -91,6 +91,10 @@ def correct_spelling(text: str) -> str:
             cliticos_perdidos = orig_palabras & CLITICOS_PROTEGIDOS - corr_palabras
             if cliticos_perdidos:
                 continue
+            
+        # Bloquear "a el" → "al" cuando "el" es pronombre
+        if m.replacements and frag_lower == "a el" and m.replacements[0].lower() == "al":
+            continue
 
         # Bloquear verbos en futuro — los maneja grammar.py
         if frag_lower in FUTUROS_PROTEGIDOS:

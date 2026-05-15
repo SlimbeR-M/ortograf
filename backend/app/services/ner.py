@@ -57,7 +57,7 @@ def capitalizar_entidades(text: str) -> str:
                     debe_capitalizar = True
 
         # Estrategia 3: nsubj sin artículo previo
-        elif (token.dep_ == "nsubj" and
+        """ elif (token.dep_ == "nsubj" and
               token.pos_ == "NOUN" and
               token.text[0].islower() and
               not tiene_art_generico):
@@ -66,7 +66,7 @@ def capitalizar_entidades(text: str) -> str:
                 for t in doc
             )
             if not tiene_det:
-                debe_capitalizar = True
+                debe_capitalizar = True """
 
         if debe_capitalizar and token.text[0].islower():
             idx = token.idx

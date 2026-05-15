@@ -908,7 +908,8 @@ VERBOS_PASADO_1RA = {
     "presto": "prestó", "engancho": "enganchó", "logro": "logró",
     "supero": "superó", "completo": "completó", "alcanzo": "alcanzó",
     "obtuvo": "obtuvo", "consiguio": "consiguió", "resolvio": "resolvió",
-    "fixe": "fijé", "entre": "entré",
+    "fixe": "fijé", "entre": "entré", "pregunte": "pregunté", "quede": "quedé",
+    "logre": "logré", "logré": "logré", "enamoro": "enamoró", "apasiono": "apasionó",
 }
 
 VERBOS_FUTURO = {
@@ -993,6 +994,8 @@ VERBOS_FUTURO = {
     "cambiara": "cambiará", "crecera": "crecerá",
     "avanzara": "avanzará", "desarrollara": "desarrollará",
     "dara": "dará", "dare": "daré",
+    "sobrara": "sobrará", "alcanzara": "alcanzará",
+    "quedara": "quedará", "faltara": "faltará",
 }
 
 PREPOSICIONES_LUGAR = {
@@ -1216,6 +1219,9 @@ def _procesar_parrafo_ngram(text: str) -> str:
                sig not in MAS_SUSTANTIVOS_CANTIDAD and \
                not sig.isdigit():
                 continue
+            if sig == "de" and dos_sig.isdigit() or dos_sig in {"doscientos", "cien", "mil", "medio"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
+                continue
             cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
 
         elif nucleo == "el":
@@ -1232,6 +1238,17 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
             if sig in {"no", "ni", "nunca", "jamás"} and dos_sig in VERBOS_3RA:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
+                continue
+            ADVERBIOS_PRONOMBRE = {"también", "tampoco", "siempre", "nunca",
+                                   "ya", "todavía", "aún", "solo", "sólo"}
+            if sig in ADVERBIOS_PRONOMBRE:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
+                continue
+            # "gracias a él" — "el" al final de frase después de "a"
+            anterior_raw = palabras[i - 1] if i > 0 else ""
+            anterior_nucleo = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
+            if anterior_nucleo == "a" and (not sig or sufijo):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
             continue
@@ -1259,17 +1276,23 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "tu", "tú") + sufijo))
 
         elif nucleo == "si":
-            # Si empieza oración o va con mayúscula → condicional → no tildar
             if i == 0 or palabra[0].isupper():
                 continue
-            
+
             anterior_raw = palabras[i - 1] if i > 0 else ""
             anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
 
-            # Si va precedido de conjunción → es condicional → no tildar
-            CONJUNCIONES = {"pero", "aunque", "y", "o", "ni", "sino", 
-                           "porque", "como", "mas", "se", "sé", "que"}
+            CONJUNCIONES = {"pero", "aunque", "y", "o", "ni", "sino",
+               "porque", "como", "mas", "se", "sé", "que",
+               "pregunte", "pregunté", "pregunto", "preguntó"}
             if anterior in CONJUNCIONES:
+                # Excepción: "respondió que sí", "dijo que sí"
+                VERBOS_RESPUESTA = {"respondio", "respondió", "dijo", "contesto",
+                                   "contestó", "afirmo", "afirmó", "confirmo", "confirmó"}
+                anterior_a_anterior = _limpiar_nucleo(palabras[i-2]) if i > 1 else ""
+                if anterior == "que" and anterior_a_anterior in VERBOS_RESPUESTA:
+                    cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
+                    continue
                 continue
 
             AFIRMACION_CONTEXTO = VERBOS_3RA | VERBOS_2DA | {"vaya", "viene", "claro"}
@@ -1280,13 +1303,12 @@ def _procesar_parrafo_ngram(text: str) -> str:
             if anterior in {"para", "por", "en", "de", "a"} and sig in CLITICOS | {"mismo", "misma"}:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
-            # "yo sí", "claro sí" → afirmación sin verbo siguiente
+
             AFIRMACION_DIRECTA = {"yo", "claro", "pues", "bueno", "obvio"}
             if anterior in AFIRMACION_DIRECTA:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
 
-            # "sí lo", "sí me", "sí te" → afirmación con clítico
             if sig in CLITICOS:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
@@ -1305,6 +1327,12 @@ def _procesar_parrafo_ngram(text: str) -> str:
 
             # "solo sé", "yo sé" → verbo saber
             if anterior in {"solo", "sólo", "yo", "tampoco", "también"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
+                continue
+
+            if anterior in {"ahora", "solo", "sólo", "tampoco", "también",
+                            "no", "nunca", "jamás", "si", "sí", "yo", "lo"} and \
+                sig in {"que", "si", "sí", ""}:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
                 continue
 
@@ -1399,8 +1427,9 @@ def correct_grammar(text: str) -> str:
                          "ojalá", "el", "un", "la", "una", "mi", "tu", "su"}
 
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
-            "inicio", "termino", "aumento", "bajo",
-            "peso", "cobro", "monto", "noto", "camino", "regreso"}
+                "inicio", "termino", "aumento", "bajo",
+                "peso", "cobro", "monto", "noto", "camino", "regreso",
+                "enamoro"}
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
                        "deseo", "uso", "tomo", "como",
@@ -1465,7 +1494,10 @@ def correct_grammar(text: str) -> str:
             if nucleo in AMBIGUOS and anterior in {"el", "al", "un", "la", "una", 
                                                     "mi", "tu", "su", "del", "este",
                                                     "ese", "aquel", "nuestro", "de",
-                                                    "a", "por", "para", "con", "sin"}:
+                                                    "a", "por", "para", "con", "sin",
+                                                    "costo", "costó", "habia", "había",
+                                                    "costado", "escolar", "nuevo",
+                                                    "duro", "mucho", "poco"}:
                 resultado.append(palabra)
             else:
                 corregido = VERBOS_PASADO_1RA[nucleo]
