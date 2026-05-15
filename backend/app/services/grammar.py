@@ -902,6 +902,9 @@ VERBOS_PASADO_1RA = {
     "olvido": "olvidó", "marco": "marcó", "noto": "notó",
     "peso": "pesó", "cobro": "cobró", "monto": "montó",
     "fije": "fijé", "respeto": "respetó", "noto": "notó",
+    "presto": "prestó", "engancho": "enganchó", "logro": "logró",
+    "supero": "superó", "completo": "completó", "alcanzo": "alcanzó",
+    "obtuvo": "obtuvo", "consiguio": "consiguió", "resolvio": "resolvió",
     "fixe": "fijé",
 }
 
@@ -1193,6 +1196,18 @@ def _procesar_parrafo_ngram(text: str) -> str:
         if nucleo == "mas":
             if sig in MAS_BLOQUEADORES or palabra.endswith(","):
                 continue
+            # Si anterior es infinitivo → "esforzarme más", "trabajar más"
+            anterior_raw = palabras[i - 1] if i > 0 else ""
+            anterior_nucleo = _limpiar_nucleo(anterior_raw)
+            es_infinitivo_anterior = bool(re.search(r'\w+(?:ar|er|ir|rme|rte|rse|rnos)$', anterior_nucleo))
+            if es_infinitivo_anterior:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
+                continue
+            # Si anterior es verbo conjugado → "me guste más", "lo que más"
+            es_verbo_anterior = bool(re.search(r'\w+(?:e|a|o|en|an|on)$', anterior_nucleo)) and len(anterior_nucleo) > 3
+            if es_verbo_anterior and anterior_nucleo not in MAS_BLOQUEADORES:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
+                continue
             if sig not in MAS_ADJETIVOS_GRADO and \
                sig not in MAS_SUSTANTIVOS_CANTIDAD and \
                not sig.isdigit():
@@ -1284,6 +1299,11 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
                 continue
 
+            # "solo sé", "yo sé" → verbo saber
+            if anterior in {"solo", "sólo", "yo", "tampoco", "también"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "se", "sé") + sufijo))
+                continue
+
         elif nucleo == "cual":
             tiene_interrogacion = "?" in text or "¿" in text
             tokens_lista = [re.sub(r'[^a-záéíóúüñ]', '', p.lower()) for p in palabras]
@@ -1357,12 +1377,12 @@ def correct_grammar(text: str) -> str:
     )
 
     # 5.5 Verbos en pasado sin tilde
-    BLOQUEADORES_SUBJ = {"que", "para", "si", "aunque",
+    BLOQUEADORES_SUBJ = {"para", "si", "aunque",
                          "ojalá", "el", "un", "la", "una", "mi", "tu", "su"}
 
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
-                "inicio", "termino", "aumento", "bajo",
-                "peso", "cobro", "monto", "noto", "camino"}
+            "inicio", "termino", "aumento", "bajo",
+            "peso", "cobro", "monto", "noto", "camino", "regreso"}
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
                            "deseo", "llamo", "uso", "tomo", "como",
@@ -1372,7 +1392,8 @@ def correct_grammar(text: str) -> str:
 
     FORZADORES_PASADO = {"él", "ella", "usted", "ellos", "ellas", "ustedes"}
 
-    DETERMINANTES_RELATIVOS = {"lo", "el", "la", "los", "las", "todo", "algo", "nada"}
+    DETERMINANTES_RELATIVOS = {"lo", "el", "la", "los", "las", "todo", 
+                           "algo", "nada", "hasta", "para"}
 
     def _es_futuro(palabra: str) -> bool:
         return bool(re.search(r'[áéíóú]$', palabra.lower()))

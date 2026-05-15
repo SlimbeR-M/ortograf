@@ -19,6 +19,16 @@ PALABRAS_CORTAS_PROTEGIDAS = {
     "fix", "git", "sql", "cdn", "ram", "cpu", "gpu", "url"
 }
 
+CLITICOS_PROTEGIDOS = {
+    "nos", "les", "me", "te", "lo", "la", "le",
+    "los", "las", "os", "se"
+}
+
+TILDES_DIACRITICAS = {
+    ("el", "él"), ("mas", "más"), ("esta", "está"), ("tu", "tú"),
+    ("se", "sé"), ("si", "sí"), ("de", "dé"), ("te", "té"), ("aun", "aún"),
+}
+
 
 def _tiene_raiz_tecnica(palabra: str) -> bool:
     p = palabra.lower()
@@ -47,21 +57,22 @@ def correct_spelling(text: str) -> str:
         if PLACEHOLDER_PATTERN.search(fragmento):
             continue
 
-        # Bloquear tildes diacríticas — las maneja grammar.py con contexto
-        TILDES_DIACRITICAS = {
-            ("el", "él"),
-            ("mas", "más"),
-            ("esta", "está"),
-            ("tu", "tú"),
-            ("se", "sé"),
-            ("si", "sí"),
-            ("de", "dé"),
-            ("te", "té"),
-            ("aun", "aún"),
-        }
+        # Bloquear tildes diacríticas
         if m.replacements:
             par = (frag_lower, m.replacements[0].lower())
             if par in TILDES_DIACRITICAS:
+                continue
+
+        # Proteger pronombres clíticos
+        if frag_lower in CLITICOS_PROTEGIDOS:
+            continue
+
+        # Bloquear si la corrección elimina un pronombre clítico
+        if m.replacements:
+            orig_palabras = set(frag_lower.split())
+            corr_palabras = set(m.replacements[0].lower().split())
+            cliticos_perdidos = orig_palabras & CLITICOS_PROTEGIDOS - corr_palabras
+            if cliticos_perdidos:
                 continue
 
         # Ignorar palabras cortas protegidas
@@ -80,8 +91,6 @@ def correct_spelling(text: str) -> str:
                 continue
 
         if m.replacements:
-            orig_sin_tilde = frag_lower.rstrip('eé')
-            remp_sin_tilde = m.replacements[0].lower().rstrip('aa')
             if (frag_lower.endswith('e') and
                 m.replacements[0].lower().endswith('a') and
                 SequenceMatcher(None, frag_lower[:-1], m.replacements[0].lower()[:-1]).ratio() > 0.85):

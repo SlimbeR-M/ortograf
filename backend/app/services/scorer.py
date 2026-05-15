@@ -5,7 +5,6 @@ tool = language_tool_python.LanguageTool("es")
 CATEGORIAS_ORTOGRAFIA = {"TYPOS", "MISSPELLING", "MORFOLOGIK_RULE"}
 CATEGORIAS_GRAMATICA = {"GRAMMAR", "AGREEMENT", "PUNCTUATION", "STYLE", "REDUNDANCY"}
 
-# Tildes diacríticas — no contar como errores porque las manejamos nosotros
 TILDES_DIACRITICAS = {
     ("el", "él"), ("mas", "más"), ("esta", "está"), ("tu", "tú"),
     ("se", "sé"), ("si", "sí"), ("de", "dé"), ("te", "té"), ("aun", "aún"),
@@ -13,7 +12,6 @@ TILDES_DIACRITICAS = {
 
 
 def _filtrar_errores(errores, texto):
-    """Filtra errores que nuestro pipeline ya maneja."""
     filtrados = []
     for m in errores:
         fragmento = texto[m.offset:m.offset + m.error_length].lower()
@@ -37,19 +35,13 @@ def calcular_score(texto_original: str, texto_corregido: str) -> dict:
             "gramatica": {"porcentaje": 100, "nivel": "Perfecto"},
         }
 
-    # Errores en original — filtrados
+    # Errores del texto original — lo que el usuario escribió mal
     errores_original = _filtrar_errores(tool.check(texto_original), texto_original)
-
-    # Errores que quedaron en el texto corregido
-    errores_corregido = _filtrar_errores(tool.check(texto_corregido), texto_corregido)
-
-    # Solo penalizar errores que quedaron sin corregir
-    errores_efectivos = errores_corregido
 
     pen_orto = 0
     pen_gram = 0
 
-    for error in errores_efectivos:
+    for error in errores_original:
         categoria = error.category
         if categoria in CATEGORIAS_ORTOGRAFIA:
             pen_orto += 5
@@ -58,12 +50,6 @@ def calcular_score(texto_original: str, texto_corregido: str) -> dict:
         else:
             pen_orto += 2
             pen_gram += 2
-
-    # Penalización adicional por cantidad de errores originales
-    # (refleja qué tan mal escribió el usuario)
-    proporcion_errores = len(errores_original) / palabras
-    pen_orto += round(proporcion_errores * 10)
-    pen_gram += round(proporcion_errores * 5)
 
     def calcular(penalizacion):
         score = max(0, 100 - (penalizacion / palabras * 20))
