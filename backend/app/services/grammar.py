@@ -532,6 +532,9 @@ VERBOS_3RA = {
     # ── Pasados irregulares comunes ───────────────────────────────────────
     "quiso", "pudo", "supo", "tuvo", "vino", "dijo", "hizo",
     "puso", "trajo", "anduvo", "estuvo", "hubo", "cupo",
+    "respondió", "contestó", "explicó", "preguntó", "llamó",
+    "llegó", "salió", "entró", "subió", "bajó", "abrió",
+    "cerró", "empezó", "terminó", "volvió", "pidió",
 }
 
 VERBOS_2DA = {
@@ -1317,6 +1320,20 @@ def _procesar_parrafo_ngram(text: str) -> str:
             if (sig in VERBOS_3RA or sig in VERBOS_2DA or
                     sig in VERBOS_TIEMPO or sig in {"no", "ni", "nunca"}):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "aun", "aún") + sufijo))
+        
+        elif nucleo == "como":
+            # "cómo" interrogativo indirecto — precedido de verbo de pregunta
+            anterior_raw = palabras[i - 1] if i > 0 else ""
+            anterior = re.sub(r'[^a-záéíóúüñ]', '', anterior_raw.lower())
+            VERBOS_PREGUNTA_INDIRECTA = {
+                "pregunto", "preguntó", "pregunta", "pregunté",
+                "dime", "dinos", "explica", "explicó", "saber",
+                "sabes", "sabe", "sabía", "ignora", "ignoraba",
+                "cuenta", "contó", "describe", "describió",
+                "averigua", "averiguó", "me", "te", "le", "nos"
+            }
+            if anterior in VERBOS_PREGUNTA_INDIRECTA or "?" in text or "¿" in text:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "como", "cómo") + sufijo))
 
     resultado = palabras[:]
     for idx, nueva in cambios:
