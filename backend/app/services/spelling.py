@@ -29,6 +29,23 @@ TILDES_DIACRITICAS = {
     ("se", "sé"), ("si", "sí"), ("de", "dé"), ("te", "té"), ("aun", "aún"),
 }
 
+FUTUROS_PROTEGIDOS = {
+    "dara", "hara", "tendra", "podra", "querra", "vendra",
+    "saldra", "pondra", "valdra", "cabra", "habra", "sabra",
+    "volvera", "llegara", "comprara", "buscara", "encontrara",
+    "trabajara", "estudiara", "vivira", "comera", "bebera",
+    "correra", "dormira", "traera", "llevara", "pagara",
+    "jugara", "llamara", "esperara", "usara", "necesitara",
+    "ayudara", "cambiara", "pensara", "sentira", "conocera",
+    "recordara", "olvidara", "pedira", "seguira", "entendera",
+    "perdera", "ganara", "recibira", "decidira", "cumplira",
+    "sufrira", "reducira", "producira", "construira", "destruira",
+    "contribuira", "distribuira", "huira", "funcionara", "mejorara",
+    "crecera", "avanzara", "desarrollara", "afectara", "generara",
+    "terminara", "empezara", "comenzara", "acabara", "finalizara",
+    "iniciara", "existira", "aumentara", "disminuira",
+}
+
 
 def _tiene_raiz_tecnica(palabra: str) -> bool:
     p = palabra.lower()
@@ -74,6 +91,15 @@ def correct_spelling(text: str) -> str:
             cliticos_perdidos = orig_palabras & CLITICOS_PROTEGIDOS - corr_palabras
             if cliticos_perdidos:
                 continue
+
+        # Bloquear verbos en futuro — los maneja grammar.py
+        if frag_lower in FUTUROS_PROTEGIDOS:
+            continue
+
+        # Bloquear si el fragmento contiene un verbo en futuro
+        fragmento_palabras = frag_lower.split()
+        if any(p in FUTUROS_PROTEGIDOS for p in fragmento_palabras):
+            continue
 
         # Ignorar palabras cortas protegidas
         if frag_lower in PALABRAS_CORTAS_PROTEGIDAS:

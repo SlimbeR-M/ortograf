@@ -905,7 +905,7 @@ VERBOS_PASADO_1RA = {
     "presto": "prestó", "engancho": "enganchó", "logro": "logró",
     "supero": "superó", "completo": "completó", "alcanzo": "alcanzó",
     "obtuvo": "obtuvo", "consiguio": "consiguió", "resolvio": "resolvió",
-    "fixe": "fijé",
+    "fixe": "fijé", "entre": "entré",
 }
 
 VERBOS_FUTURO = {
@@ -989,6 +989,7 @@ VERBOS_FUTURO = {
     "funcionara": "funcionará", "mejorara": "mejorará",
     "cambiara": "cambiará", "crecera": "crecerá",
     "avanzara": "avanzará", "desarrollara": "desarrollará",
+    "dara": "dará", "dare": "daré",
 }
 
 PREPOSICIONES_LUGAR = {
@@ -1385,15 +1386,15 @@ def correct_grammar(text: str) -> str:
             "peso", "cobro", "monto", "noto", "camino", "regreso"}
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
-                           "deseo", "llamo", "uso", "tomo", "como",
-                           "bebo", "creo", "pienso", "siento", "digo",
-                           "hago", "voy", "vengo", "tengo", "puedo",
-                           "sé", "veo", "oigo", "pido", "sigo"}
+                       "deseo", "uso", "tomo", "como",
+                       "bebo", "creo", "pienso", "siento", "digo",
+                       "hago", "voy", "vengo", "tengo", "puedo",
+                       "sé", "veo", "oigo", "pido", "sigo"}
 
     FORZADORES_PASADO = {"él", "ella", "usted", "ellos", "ellas", "ustedes"}
 
     DETERMINANTES_RELATIVOS = {"lo", "el", "la", "los", "las", "todo", 
-                           "algo", "nada", "hasta", "para"}
+                           "algo", "nada", "hasta", "para", "cuando"}
 
     def _es_futuro(palabra: str) -> bool:
         return bool(re.search(r'[áéíóú]$', palabra.lower()))
