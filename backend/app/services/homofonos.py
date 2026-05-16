@@ -145,17 +145,6 @@ def resolver_homofonos(text: str) -> str:
                 nuevo = "arrojó" if token.text[0].islower() else "Arrojó"
                 resultado[inicio:fin] = list(nuevo)
 
-        # ── desecha / deshecha ───────────────────────────────────────────
-        if tok_lower == "arroyo":
-            ventana = [t.text.lower() for t in tokens[max(0, i-5):i+6] if t.i != token.i]
-            tiene_violencia = any(w in LEXICO_VIOLENCIA for w in ventana)
-            tiene_naturaleza = any(w in LEXICO_NATURALEZA for w in ventana)
-            if tiene_violencia and not tiene_naturaleza:
-                inicio = token.idx
-                fin = inicio + len(token.text)
-                nuevo = "arrojó" if token.text[0].islower() else "Arrojó"
-                resultado[inicio:fin] = list(nuevo)
-
         # ── hacho / hecho ────────────────────────────────────────────────
         elif tok_lower == "hacho":
             anterior_lower = anterior.text.lower() if anterior else ""
@@ -166,11 +155,21 @@ def resolver_homofonos(text: str) -> str:
                 resultado[inicio:fin] = list(nuevo)
         
         # ── allá / haya ──────────────────────────────────────────────────
-        if tok_lower == "allá" or tok_lower == "alla":
+        elif tok_lower == "allá" or tok_lower == "alla":
             if siguiente and re.search(r'(ado|ido|to|so|cho)$', sig_lower):
                 inicio = token.idx
                 fin = inicio + len(token.text)
                 nuevo = "haya" if token.text[0].islower() else "Haya"
+                resultado[inicio:fin] = list(nuevo)
+        
+        elif tok_lower == "hacia":
+            CONTEXTO_CLIMA = {"calor", "frio", "frío", "sol", "viento", 
+                             "lluvia", "frio", "caliente", "tiempo"}
+            ventana = [t.text.lower() for t in tokens[i:min(i+3, len(tokens))]]
+            if any(w in CONTEXTO_CLIMA for w in ventana):
+                inicio = token.idx
+                fin = inicio + len(token.text)
+                nuevo = "hacía" if token.text[0].islower() else "Hacía"
                 resultado[inicio:fin] = list(nuevo)
 
     return "".join(resultado)
