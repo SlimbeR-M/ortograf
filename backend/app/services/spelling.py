@@ -46,6 +46,13 @@ FUTUROS_PROTEGIDOS = {
     "iniciara", "existira", "aumentara", "disminuira",
 }
 
+PALABRAS_REGIONALES = {
+    "tlayuda", "tlayudas", "mezcal", "mole", "pozole", "tamal", "tamales",
+    "atole", "tepache", "pulque", "chapulines", "molcajete", "comal",
+    "metate", "tlacoyo", "memela", "tetela", "huarache", "sope",
+    "tostada", "enchilada", "quesadilla",
+}
+
 
 def _tiene_raiz_tecnica(palabra: str) -> bool:
     p = palabra.lower()
@@ -91,7 +98,10 @@ def correct_spelling(text: str) -> str:
             cliticos_perdidos = orig_palabras & CLITICOS_PROTEGIDOS - corr_palabras
             if cliticos_perdidos:
                 continue
-            
+
+        if m.replacements and "buen" in frag_lower and "bien" in m.replacements[0].lower():
+            continue
+
         # Bloquear "a el" → "al" cuando "el" es pronombre
         if m.replacements and frag_lower == "a el" and m.replacements[0].lower() == "al":
             continue
@@ -107,6 +117,9 @@ def correct_spelling(text: str) -> str:
 
         # Ignorar palabras cortas protegidas
         if frag_lower in PALABRAS_CORTAS_PROTEGIDAS:
+            continue
+
+        if frag_lower in PALABRAS_REGIONALES:
             continue
 
         if len(fragmento) < 4 and _tiene_raiz_tecnica(fragmento):

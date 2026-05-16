@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:8000/corregir -H \"Content-Type: application/json\" -d '{\"texto\": \"pedi una tlayuda deliciosa\"}')",
+      "Bash(curl -s -X POST http://localhost:8000/corregir -H \"Content-Type: application/json\" -d '{\"texto\": \"encontramos boletos a muy buen precio\"}')"
+    ]
+  }
+}
