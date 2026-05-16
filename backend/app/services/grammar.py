@@ -7,7 +7,7 @@ ARTICULOS = {"el", "la", "los", "las", "un", "una", "unos", "unas",
 
 MAS_BLOQUEADORES = {
     # ── Negación ──────────────────────────────────────────────────────────
-    "no", "ni", "nunca", "jamás", "tampoco", "nada", "nadie",
+    "no", "ni", "jamás", "tampoco", "nada", "nadie",
 
     # ── Verbos auxiliares y copulativos ───────────────────────────────────
     "es", "era", "fue", "será", "sea", "sido",
@@ -915,6 +915,7 @@ VERBOS_PASADO_1RA = {
     "obtuvo": "obtuvo", "consiguio": "consiguió", "resolvio": "resolvió",
     "fixe": "fijé", "entre": "entré", "pregunte": "pregunté", "quede": "quedé",
     "logre": "logré", "logré": "logré", "enamoro": "enamoró", "apasiono": "apasionó",
+    "enseño": "enseñó", "dedique": "dediqué", "dedico": "dedicó",
 }
 
 VERBOS_FUTURO = {
@@ -1002,6 +1003,7 @@ VERBOS_FUTURO = {
     "sobrara": "sobrará", "alcanzara": "alcanzará",
     "quedara": "quedará", "faltara": "faltará",
     "pare": "paré", "deje": "dejé", "entre": "entré",
+    "dejara": "dejará", "lograra": "logrará", "sorprendera": "sorprenderá",
 }
 
 PREPOSICIONES_LUGAR = {
@@ -1257,6 +1259,12 @@ def _procesar_parrafo_ngram(text: str) -> str:
             if anterior_nucleo == "a" and (not sig or sufijo or sig[0].isupper()):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
+            if anterior_nucleo == "a" and sig in {"quien", "quién", "que", "cual"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
+                continue
+            if sig in {"quien", "quién"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
+                continue
             continue
 
         elif nucleo in ("esta", "este"):
@@ -1435,7 +1443,7 @@ def correct_grammar(text: str) -> str:
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
             "inicio", "termino", "aumento", "bajo",
             "peso", "cobro", "monto", "noto", "camino", "regreso",
-            "viaje"}
+            "viaje", "avance"}
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
                        "deseo", "uso", "tomo", "como",
@@ -1497,13 +1505,19 @@ def correct_grammar(text: str) -> str:
             anterior not in bloqueadores_efectivos or
             anterior_orig in FORZADORES_PASADO
         ) and not anterior_es_futuro:
-            if nucleo in AMBIGUOS and anterior in {"el", "al", "un", "la", "una", 
-                                                    "mi", "tu", "su", "del", "este",
-                                                    "ese", "aquel", "nuestro", "de",
-                                                    "a", "por", "para", "con", "sin",
-                                                    "costo", "costó", "habia", "había",
-                                                    "costado", "escolar", "nuevo",
-                                                    "duro", "mucho", "poco"}:
+            _AMBIGUOS_BLOQ = {"el", "al", "un", "la", "una",
+                              "mi", "tu", "su", "del", "este",
+                              "ese", "aquel", "nuestro", "cada", "de",
+                              "a", "por", "para", "con", "sin",
+                              "costo", "costó", "habia", "había",
+                              "costado", "escolar", "nuevo",
+                              "duro", "mucho", "poco"}
+            if nucleo in AMBIGUOS and (
+                anterior in _AMBIGUOS_BLOQ or
+                anterior_a_que in {"el", "al", "un", "la", "una", "mi", "tu",
+                                   "su", "del", "este", "ese", "aquel",
+                                   "nuestro", "cada", "de", "por", "para", "con"}
+            ):
                 resultado.append(palabra)
             else:
                 corregido = VERBOS_PASADO_1RA[nucleo]

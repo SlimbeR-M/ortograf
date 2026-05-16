@@ -102,6 +102,25 @@ def correct_spelling(text: str) -> str:
         if m.replacements and "buen" in frag_lower and "bien" in m.replacements[0].lower():
             continue
 
+        # Bloquear "quien" → "quién" cuando es pronombre relativo (no interrogativo)
+        # RAE: solo lleva tilde en interrogativas/exclamativas directas e indirectas
+        if (frag_lower == "quien" and m.replacements and
+                m.replacements[0].lower() == "quién"):
+            _VERBOS_INTERROG = {
+                "sé", "se", "sabes", "sabe", "sabía", "saber",
+                "dime", "dinos", "pregunta", "pregunto", "preguntó", "pregunté",
+                "explica", "explicó", "conoces", "conoce", "conocía",
+                "averigua", "averiguó", "ignora", "ignoraba", "importa",
+            }
+            texto_previo = text[:m.offset].lower()
+            palabras_previas = set(re.findall(r'\b\w+\b', texto_previo[-60:]))
+            es_interrogativo = (
+                "?" in text or "¿" in text or
+                bool(palabras_previas & _VERBOS_INTERROG)
+            )
+            if not es_interrogativo:
+                continue
+
         # Bloquear "a el" → "al" cuando "el" es pronombre
         if m.replacements and frag_lower == "a el" and m.replacements[0].lower() == "al":
             continue
