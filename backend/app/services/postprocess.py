@@ -58,6 +58,12 @@ def _finalizar_parrafo(text: str) -> str:
         text
     )
 
+    # Restaurar siglas conocidas a mayúsculas completas
+    _SIGLAS = {r'\bIa\b': 'IA', r'\bia\b': 'IA',
+               r'\bMl\b': 'ML', r'\bNlp\b': 'NLP'}
+    for patron, sigla in _SIGLAS.items():
+        text = re.sub(patron, sigla, text)
+
     if not text.endswith(("?", ".", "!", "...", "¿", "¡")):
         text += "."
 

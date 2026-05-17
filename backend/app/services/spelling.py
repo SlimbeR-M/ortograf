@@ -16,7 +16,8 @@ RAICES_TECNICAS = {
 
 PALABRAS_CORTAS_PROTEGIDAS = {
     "dev", "devs", "ops", "api", "css", "xml", "log", "bug",
-    "fix", "git", "sql", "cdn", "ram", "cpu", "gpu", "url"
+    "fix", "git", "sql", "cdn", "ram", "cpu", "gpu", "url",
+    "ia", "ml", "nlp"
 }
 
 CLITICOS_PROTEGIDOS = {
@@ -27,6 +28,12 @@ CLITICOS_PROTEGIDOS = {
 TILDES_DIACRITICAS = {
     ("el", "él"), ("mas", "más"), ("esta", "está"), ("tu", "tú"),
     ("se", "sé"), ("si", "sí"), ("de", "dé"), ("te", "té"), ("aun", "aún"),
+}
+
+# Verbos que grammar.py acentúa correctamente según contexto.
+# Bloqueamos que LanguageTool les añada la tilde equivocada.
+VERBOS_TILDE_PROTEGIDOS = {
+    "publico",   # publicó (verbo) vs público (adj) — grammar.py decide
 }
 
 FUTUROS_PROTEGIDOS = {
@@ -87,6 +94,10 @@ def correct_spelling(text: str) -> str:
             if par in TILDES_DIACRITICAS:
                 continue
 
+        # Proteger verbos que grammar.py acentúa según contexto
+        if any(p in VERBOS_TILDE_PROTEGIDOS for p in frag_lower.split()):
+            continue
+
         # Proteger pronombres clíticos
         if frag_lower in CLITICOS_PROTEGIDOS:
             continue
@@ -123,6 +134,10 @@ def correct_spelling(text: str) -> str:
 
         # Bloquear "a el" → "al" cuando "el" es pronombre
         if m.replacements and frag_lower == "a el" and m.replacements[0].lower() == "al":
+            continue
+
+        # Bloquear "el" → "en" (error de LanguageTool con "según el", etc.)
+        if m.replacements and "el" in frag_lower and m.replacements[0].lower() == "en":
             continue
 
         # Bloquear verbos en futuro — los maneja grammar.py

@@ -108,6 +108,8 @@ MAS_SUSTANTIVOS_CANTIDAD = {
     "conciencia", "consciencia", "paciencia", "experiencia",
     "presencia", "ausencia", "existencia", "resistencia",
     "doscientos", "cientos", "miles", "millones", "cien",
+    "veinte", "treinta", "cuarenta", "cincuenta", "sesenta",
+    "setenta", "ochenta", "noventa", "mil", "docenas", "decenas",
 }
 
 MAS_ADJETIVOS_GRADO = {
@@ -913,9 +915,11 @@ VERBOS_PASADO_1RA = {
     "presto": "prestó", "engancho": "enganchó", "logro": "logró",
     "supero": "superó", "completo": "completó", "alcanzo": "alcanzó",
     "obtuvo": "obtuvo", "consiguio": "consiguió", "resolvio": "resolvió",
-    "fixe": "fijé", "entre": "entré", "pregunte": "pregunté", "quede": "quedé",
+    "fixe": "fijé", "pregunte": "pregunté", "quede": "quedé",
     "logre": "logré", "logré": "logré", "enamoro": "enamoró", "apasiono": "apasionó",
     "enseño": "enseñó", "dedique": "dediqué", "dedico": "dedicó",
+    "analizo": "analizó", "resumio": "resumió",
+    "concluyo": "concluyó", "determino": "determinó", "establacio": "estableció",
 }
 
 VERBOS_FUTURO = {
@@ -1002,7 +1006,7 @@ VERBOS_FUTURO = {
     "dara": "dará", "dare": "daré",
     "sobrara": "sobrará", "alcanzara": "alcanzará",
     "quedara": "quedará", "faltara": "faltará",
-    "pare": "paré", "deje": "dejé", "entre": "entré",
+    "pare": "paré", "deje": "dejé",
     "dejara": "dejará", "lograra": "logrará", "sorprendera": "sorprenderá",
 }
 
@@ -1111,6 +1115,15 @@ ADJETIVOS_COMUNES = {
     "bien", "mal", "aquí", "ahí", "allí",
     "adentro", "afuera", "arriba", "abajo",
     "cerca", "lejos", "listo",
+
+    # ── Estado de preparación/disposición ─────────────────────────────────
+    "preparado", "preparada", "preparados", "preparadas",
+    "dispuesto", "dispuesta", "dispuestos", "dispuestas",
+
+    # ── Participios con rol adjetival ──────────────────────────────────────
+    "llamado", "llamada", "llamados", "llamadas",
+    "destinado", "destinada", "obligado", "obligada",
+    "encargado", "encargada", "autorizado", "autorizada",
 }
 
 INTENSIFICADORES = {"más", "mas", "muy", "tan", "bastante", "poco", "bien", "mal"}
@@ -1223,12 +1236,12 @@ def _procesar_parrafo_ngram(text: str) -> str:
             if es_verbo_anterior and anterior_nucleo not in MAS_BLOQUEADORES:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
                 continue
+            if sig == "de" and (dos_sig.isdigit() or dos_sig in MAS_SUSTANTIVOS_CANTIDAD):
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
+                continue
             if sig not in MAS_ADJETIVOS_GRADO and \
                sig not in MAS_SUSTANTIVOS_CANTIDAD and \
                not sig.isdigit():
-                continue
-            if sig == "de" and dos_sig.isdigit() or dos_sig in {"doscientos", "cien", "mil", "medio"}:
-                cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
                 continue
             cambios.append((i, prefijo + _tildar(nucleo_orig, "mas", "más") + sufijo))
 
@@ -1263,6 +1276,19 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
             if sig in {"quien", "quién"}:
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
+                continue
+            # "el señaló/analizó/..." — verbo pasado ya tildado por paso 5.5
+            if sig in set(VERBOS_PASADO_1RA.values()):
+                cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
+                continue
+            # "según él la IA / según él explicó" — preposición personal
+            _PREP_PRONOMBRE = {"según", "segun"}
+            if anterior_nucleo in _PREP_PRONOMBRE and (
+                sig in VERBOS_3RA or
+                sig in set(VERBOS_PASADO_1RA.values()) or
+                sig in {"la", "los", "las", "un", "una"}
+            ):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "el", "él") + sufijo))
                 continue
             continue
@@ -1436,6 +1462,21 @@ def correct_grammar(text: str) -> str:
         text
     )
 
+    # 5.1 Coma ante "quien" en cláusulas explicativas (relativo no restrictivo)
+    _BLOQ_QUIEN = {"a", "para", "con", "de", "por", "sin", "ante", "sobre",
+                   "tras", "se", "sé", "sabe", "sabes", "no", "es", "era",
+                   "que", "lo", "al", "del", "ni", "hay"}
+    def _fix_quien_comma(m):
+        return m.group(0) if m.group(1).lower() in _BLOQ_QUIEN else m.group(1) + ', ' + m.group(2)
+    text = re.sub(r'([^\s,]+) (quien)\b', _fix_quien_comma, text, flags=re.IGNORECASE)
+
+    # 5.2 Comas alrededor de "por ejemplo" en el interior de una oración
+    text = re.sub(
+        r'(?<=[a-záéíóúüñA-ZÁÉÍÓÚÜÑ]) (por ejemplo) ',
+        ', por ejemplo, ',
+        text, flags=re.IGNORECASE
+    )
+
     # 5.5 Verbos en pasado sin tilde
     BLOQUEADORES_SUBJ = {"para", "si", "aunque",
                          "ojalá", "el", "un", "la", "una", "mi", "tu", "su"}
@@ -1443,7 +1484,7 @@ def correct_grammar(text: str) -> str:
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
             "inicio", "termino", "aumento", "bajo",
             "peso", "cobro", "monto", "noto", "camino", "regreso",
-            "viaje", "avance"}
+            "viaje", "avance", "seria"}
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
                        "deseo", "uso", "tomo", "como",
@@ -1503,7 +1544,8 @@ def correct_grammar(text: str) -> str:
 
         if nucleo in VERBOS_PASADO_1RA and (
             anterior not in bloqueadores_efectivos or
-            anterior_orig in FORZADORES_PASADO
+            anterior_orig in FORZADORES_PASADO or
+            (anterior == "el" and nucleo not in AMBIGUOS)
         ) and not anterior_es_futuro:
             _AMBIGUOS_BLOQ = {"el", "al", "un", "la", "una",
                               "mi", "tu", "su", "del", "este",
