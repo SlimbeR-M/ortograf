@@ -110,6 +110,22 @@ def correct_spelling(text: str) -> str:
             if cliticos_perdidos:
                 continue
 
+        # Bloquear reemplazos multi-palabra problemáticos
+        # Cuando mismo número de palabras y NINGUNA se mantiene igual →
+        # LT está haciendo concordancia masiva incorrecta ("esperado gracias" → "esperada gracia")
+        if m.replacements:
+            orig_words = frag_lower.split()
+            repl_words = m.replacements[0].lower().split()
+            if len(orig_words) > 1 and len(repl_words) > 1:
+                if len(orig_words) == len(repl_words):
+                    n_same = sum(1 for o, r in zip(orig_words, repl_words) if o == r)
+                    if n_same == 0:
+                        continue
+                else:
+                    sim = SequenceMatcher(None, frag_lower, m.replacements[0].lower()).ratio()
+                    if sim < 0.7:
+                        continue
+
         if m.replacements and "buen" in frag_lower and "bien" in m.replacements[0].lower():
             continue
 

@@ -1010,6 +1010,17 @@ VERBOS_FUTURO = {
     "quedara": "quedará", "faltara": "faltará",
     "pare": "paré", "deje": "dejé",
     "dejara": "dejará", "lograra": "logrará", "sorprendera": "sorprenderá",
+    "destinara": "destinará", "destinaran": "destinarán",
+    "asignara": "asignará", "asignaran": "asignarán",
+    "implementara": "implementará", "implementaran": "implementarán",
+    "promovera": "promoverá", "promoveran": "promoverán",
+    "ampliara": "ampliará", "ampliaran": "ampliarán",
+    "reforzara": "reforzará", "reforzaran": "reforzarán",
+    "creara": "creará", "crearan": "crearán",
+    "anunciara": "anunciará", "anunciaran": "anunciarán",
+    "presentara": "presentará", "presentaran": "presentarán",
+    "entregara": "entregará", "entregaran": "entregarán",
+    "iniciara": "iniciará", "iniciaran": "iniciarán",
 }
 
 PREPOSICIONES_LUGAR = {
@@ -1189,6 +1200,14 @@ VERBOS_DESEO_PASADO = {
     "quiso", "deseo", "deseó",
 }
 
+# Verbos de anuncio: introducen futuro reportado ("dijo que haría") → no subjuntivo
+VERBOS_ANUNCIO = {
+    "anunció", "anuncio", "dijo", "informó", "informo", "confirmó",
+    "confirmo", "declaró", "declaro", "comunicó", "comunico",
+    "adelantó", "adelanto", "reveló", "revelo", "señaló", "señalo",
+    "indicó", "indico", "aseguró", "aseguro", "sostuvo", "afirmó", "afirmo",
+}
+
 _SUBJUNTIVO_ANTE_QUE = {"de", "para", "sin", "antes", "a", "con"}
 _CORTE_CLAUSULA = {
     "y", "o", "pero", "sino", "porque", "ya", "así", "entonces",
@@ -1201,6 +1220,8 @@ def _es_subjuntivo_clausula(palabras: list, j: int) -> bool:
 
     Busca hacia atrás hasta 9 posiciones un 'que' precedido por
     preposición subordinante o verbo de deseo/expectativa.
+    Devuelve False si el 'que' es introducido por verbo de anuncio
+    (en ese caso el verbo siguiente es futuro reportado, no subjuntivo).
     """
     for k in range(j - 1, max(j - 10, -1), -1):
         w = re.sub(r'^["\'\¿¡\(\[]+|["\'\?!,\.;:\)\]]+$', '', palabras[k]).lower()
@@ -1208,6 +1229,9 @@ def _es_subjuntivo_clausula(palabras: list, j: int) -> bool:
             break
         if w == "que" and k > 0:
             ante_que = re.sub(r'^["\'\¿¡\(\[]+|["\'\?!,\.;:\)\]]+$', '', palabras[k - 1]).lower()
+            # Verbo de anuncio → futuro reportado → no bloquear tilde
+            if ante_que in VERBOS_ANUNCIO:
+                return False
             if ante_que in _SUBJUNTIVO_ANTE_QUE or ante_que in VERBOS_DESEO_PASADO:
                 return True
             break

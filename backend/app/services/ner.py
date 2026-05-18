@@ -77,4 +77,28 @@ def capitalizar_entidades(text: str) -> str:
             if idx < len(resultado) and resultado[idx].islower():
                 resultado[idx] = resultado[idx].upper()
 
+    # Estrategia 3: secuencia de 2+ PROPNs sin entidad → nombre propio
+    # Cubre "ana patricia torres" cuando el contexto largo rompe el NER de spaCy
+    k = 0
+    while k < len(doc):
+        token = doc[k]
+        if token.pos_ == "PROPN" and token.ent_type_ == "" and token.text not in TITULOS_MINUSCULA:
+            chain = [k]
+            j = k + 1
+            while (j < len(doc) and
+                   doc[j].pos_ in ["PROPN", "NOUN"] and
+                   doc[j].ent_type_ == "" and
+                   doc[j].text not in TITULOS_MINUSCULA):
+                chain.append(j)
+                j += 1
+            if len(chain) >= 2:
+                for ci in chain:
+                    t = doc[ci]
+                    char_idx = t.idx
+                    if char_idx < len(resultado) and resultado[char_idx].islower():
+                        resultado[char_idx] = resultado[char_idx].upper()
+            k = j
+        else:
+            k += 1
+
     return "".join(resultado)
