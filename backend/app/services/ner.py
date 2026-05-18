@@ -9,6 +9,15 @@ NOMBRES_AMBIGUOS = {
     "esperanza", "angel", "lupe", "consuelo", "rocio"
 }
 
+# Títulos que van en minúscula ante nombre propio según la RAE
+TITULOS_MINUSCULA = {
+    "doctor", "doctora", "ingeniero", "ingeniera",
+    "licenciado", "licenciada", "secretario", "secretaria",
+    "arquitecto", "arquitecta", "maestro", "maestra",
+    "director", "directora", "gerente", "coordinador", "coordinadora",
+    "subsecretario", "subsecretaria",
+}
+
 ARTICULOS_GENERICOS = {"la", "el", "una", "un", "las", "los", "unas", "unos"}
 
 # Conjunciones tras las que un nombre ambiguo es probablemente propio
@@ -24,30 +33,36 @@ def get_nlp():
 
 def capitalizar_entidades(text: str) -> str:
     nlp = get_nlp()
-    doc = nlp(text)
+    # Correr NER sobre el texto en minúsculas garantiza que spaCy reconozca
+    # entidades completas aunque el texto llegue parcialmente capitalizado
+    # (p. ej. "El Doctor Carlos estrada" → spaCy pierde "estrada" como PER).
+    doc = nlp(text.lower())
     resultado = list(text)
 
     for i, token in enumerate(doc):
-        tok_lower = token.text.lower()
+        tok_lower = token.text  # ya es minúscula porque doc es de text.lower()
         debe_capitalizar = False
 
         anterior = doc[i - 1] if i > 0 else None
         tiene_art_generico = (
-            anterior and anterior.text.lower() in ARTICULOS_GENERICOS
+            anterior and anterior.text in ARTICULOS_GENERICOS
         )
 
         # Estrategia 1: NER reconoció la entidad
+        # Los títulos (doctor, ingeniero…) van en minúscula según RAE salvo inicio
         if token.ent_type_ in ["PER", "LOC", "ORG"]:
-            debe_capitalizar = True
+            if tok_lower in TITULOS_MINUSCULA and i > 0:
+                pass  # título en mitad de texto → no capitalizar
+            else:
+                debe_capitalizar = True
 
         # Estrategia 2: nombre ambiguo con heurística
-        elif tok_lower in NOMBRES_AMBIGUOS and token.text[0].islower():
+        elif tok_lower in NOMBRES_AMBIGUOS:
             if not tiene_art_generico:
                 es_inicio = token.i == 0
                 es_sujeto = token.dep_ == "nsubj"
-                # Nuevo: después de conjunción sin artículo
                 tras_conjuncion = (
-                    anterior and anterior.text.lower() in CONJUNCIONES
+                    anterior and anterior.text in CONJUNCIONES
                 )
                 tiene_det = any(
                     t.pos_ == "DET" and t.i == token.i - 1
@@ -56,20 +71,10 @@ def capitalizar_entidades(text: str) -> str:
                 if (es_inicio or es_sujeto or tras_conjuncion) and not tiene_det:
                     debe_capitalizar = True
 
-        # Estrategia 3: nsubj sin artículo previo
-        """ elif (token.dep_ == "nsubj" and
-              token.pos_ == "NOUN" and
-              token.text[0].islower() and
-              not tiene_art_generico):
-            tiene_det = any(
-                t.pos_ == "DET" and t.i == token.i - 1
-                for t in doc
-            )
-            if not tiene_det:
-                debe_capitalizar = True """
-
-        if debe_capitalizar and token.text[0].islower():
+        # Solo capitalizar si el carácter en el texto ORIGINAL está en minúscula
+        if debe_capitalizar:
             idx = token.idx
-            resultado[idx] = resultado[idx].upper()
+            if idx < len(resultado) and resultado[idx].islower():
+                resultado[idx] = resultado[idx].upper()
 
     return "".join(resultado)

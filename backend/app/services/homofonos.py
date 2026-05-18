@@ -163,10 +163,9 @@ def resolver_homofonos(text: str) -> str:
                 resultado[inicio:fin] = list(nuevo)
         
         elif tok_lower == "hacia":
-            CONTEXTO_CLIMA = {"calor", "frio", "frío", "sol", "viento", 
-                             "lluvia", "frio", "caliente", "tiempo"}
-            ventana = [t.text.lower() for t in tokens[i:min(i+3, len(tokens))]]
-            if any(w in CONTEXTO_CLIMA for w in ventana):
+            # VERB/AUX → imperfecto de "hacer" → "hacía"
+            # ADP → preposición direccional → sin tilde
+            if token.pos_ in ["VERB", "AUX"]:
                 inicio = token.idx
                 fin = inicio + len(token.text)
                 nuevo = "hacía" if token.text[0].islower() else "Hacía"

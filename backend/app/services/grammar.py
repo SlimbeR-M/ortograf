@@ -920,6 +920,7 @@ VERBOS_PASADO_1RA = {
     "enseño": "enseñó", "dedique": "dediqué", "dedico": "dedicó",
     "analizo": "analizó", "resumio": "resumió",
     "concluyo": "concluyó", "determino": "determinó", "establacio": "estableció",
+    "radico": "radicó",
 }
 
 VERBOS_FUTURO = {
@@ -951,10 +952,11 @@ VERBOS_FUTURO = {
     "participaran": "participarán", "colaboraran": "colaborarán",
     "apoyaran": "apoyarán", "financiaran": "financiarán",
     "mejoraran": "mejorarán", "aumentaran": "aumentarán",
-    "afectaran": "afectarán", "generaran": "generarán",
+    "generaran": "generarán",
     "usaran": "usarán", "necesitaran": "necesitarán",
     "tomaran": "tomarán", "dejaran": "dejarán",
     "compraran": "comprarán", "vendaran": "venderán",
+    "contaran": "contarán",
 
     # ── ER/IR ─────────────────────────────────────────────────────────────
     "comeran": "comerán", "beberan": "beberán", "correran": "correrán",
@@ -1177,6 +1179,39 @@ HOMOFONOS_SIMPLES = {
     r'\bojala\b': 'ojalá',
     r'\bah\b(?= ido| estado| sido| tenido| podido| querido| dicho| hecho)': 'ha',
 }
+
+
+VERBOS_DESEO_PASADO = {
+    "esperaba", "queria", "quería", "pedia", "pedía", "necesitaba",
+    "requeria", "requería", "deseaba", "preferia", "prefería",
+    "rogaba", "suplicaba", "ordenaba", "mandaba", "exigia", "exigía",
+    "pidio", "pidió", "ordeno", "ordenó", "rogo", "rogó",
+    "quiso", "deseo", "deseó",
+}
+
+_SUBJUNTIVO_ANTE_QUE = {"de", "para", "sin", "antes", "a", "con"}
+_CORTE_CLAUSULA = {
+    "y", "o", "pero", "sino", "porque", "ya", "así", "entonces",
+    "pues", "además", "mientras", "aunque",
+}
+
+
+def _es_subjuntivo_clausula(palabras: list, j: int) -> bool:
+    """True si la palabra en posición j está en cláusula subjuntiva.
+
+    Busca hacia atrás hasta 9 posiciones un 'que' precedido por
+    preposición subordinante o verbo de deseo/expectativa.
+    """
+    for k in range(j - 1, max(j - 10, -1), -1):
+        w = re.sub(r'^["\'\¿¡\(\[]+|["\'\?!,\.;:\)\]]+$', '', palabras[k]).lower()
+        if w in _CORTE_CLAUSULA:
+            break
+        if w == "que" and k > 0:
+            ante_que = re.sub(r'^["\'\¿¡\(\[]+|["\'\?!,\.;:\)\]]+$', '', palabras[k - 1]).lower()
+            if ante_que in _SUBJUNTIVO_ANTE_QUE or ante_que in VERBOS_DESEO_PASADO:
+                return True
+            break
+    return False
 
 
 def _limpiar_nucleo(palabra: str) -> str:
@@ -1479,12 +1514,17 @@ def correct_grammar(text: str) -> str:
 
     # 5.5 Verbos en pasado sin tilde
     BLOQUEADORES_SUBJ = {"para", "si", "aunque",
-                         "ojalá", "el", "un", "la", "una", "mi", "tu", "su"}
+                         "ojalá", "el", "un", "la", "una", "mi", "tu", "su", "antes"}
 
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
             "inicio", "termino", "aumento", "bajo",
             "peso", "cobro", "monto", "noto", "camino", "regreso",
-            "viaje", "avance", "seria"}
+            "viaje", "avance", "seria", "proceso",
+            "desarrollo", "ingreso", "progreso", "registro", "acceso",
+            "apoyo", "empleo", "ensayo", "relevo", "relato", "cargo",
+            "mando", "manejo", "arreglo", "ajuste", "rechazo", "retraso",
+            "reemplazo", "rescate", "repaso", "reflejo", "remedio",
+            "recurso", "riesgo", "resumen", "turno", "paso"}
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
                        "deseo", "uso", "tomo", "como",
@@ -1507,8 +1547,14 @@ def correct_grammar(text: str) -> str:
         anterior = _limpiar_nucleo(palabras[j-1]) if j > 0 else ""
         anterior_orig = palabras[j-1] if j > 0 else ""
         anterior_a_que = _limpiar_nucleo(palabras[j-2]) if j > 1 else ""
+        tres_antes = _limpiar_nucleo(palabras[j-3]) if j > 2 else ""
         siguiente = _limpiar_nucleo(palabras[j+1]) if j + 1 < len(palabras) else ""
         anterior_es_futuro = _es_futuro(anterior_orig) if anterior_orig else False
+
+        # Cláusula subjuntiva detectada por lookback → nunca tildar
+        if _es_subjuntivo_clausula(palabras, j):
+            resultado.append(palabra)
+            continue
 
         # Verificar si "que" anterior es pronombre relativo
         # ej: "todo lo que pasó", "algo que ocurrió"
@@ -1573,8 +1619,12 @@ def correct_grammar(text: str) -> str:
     # 5.6 Verbos en futuro sin tilde
     palabras = text.split()
     resultado = []
-    for palabra in palabras:
+    for k, palabra in enumerate(palabras):
         nucleo = _limpiar_nucleo(palabra)
+        # Cláusula subjuntiva → no tildar como futuro
+        if _es_subjuntivo_clausula(palabras, k):
+            resultado.append(palabra)
+            continue
         if nucleo in VERBOS_FUTURO:
             corregido = VERBOS_FUTURO[nucleo]
             if palabra[0].isupper():

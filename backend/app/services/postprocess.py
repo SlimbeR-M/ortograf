@@ -13,8 +13,20 @@ def finalize_text(text: str) -> str:
     return '\n'.join(resultado)
 
 
+_TITULOS_RAE_RE = re.compile(
+    r'(?<=\w )'
+    r'(Doctor|Doctora|Ingeniero|Ingeniera|Licenciado|Licenciada'
+    r'|Secretario|Secretaria|Arquitecto|Arquitecta|Maestro|Maestra'
+    r'|Director|Directora|Gerente|Coordinador|Coordinadora'
+    r'|Subsecretario|Subsecretaria)\b'
+)
+
+
 def _finalizar_parrafo(text: str) -> str:
     text = text.strip()
+
+    # Títulos ante nombre propio → minúscula según RAE (no al inicio de oración)
+    text = _TITULOS_RAE_RE.sub(lambda m: m.group(1).lower(), text)
 
     # Proteger puntos suspensivos
     text = re.sub(r'\.{3,}', '__ELLIPSIS__', text)
