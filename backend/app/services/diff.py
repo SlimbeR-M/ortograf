@@ -62,12 +62,12 @@ def _explicar_cambio(original: str, corregido: str) -> str:
     corr_sin = _normalizar(corregido).strip(".,;:¿?¡!")
 
     if orig_l == corr_l and original != corregido:
-        return f"Mayúscula: '{original}' debe escribirse '{corregido}'"
+        return f"Mayúscula corregida: '{original}' → '{corregido}'"
 
     if orig_sin == corr_sin and orig_l != corr_l:
-        return f"Tilde: '{original}' debe escribirse '{corregido}'"
+        return f"Tilde corregida: '{original}' → '{corregido}'"
 
     if orig_sin == corr_sin and original != corregido:
-        return f"Tilde y mayúscula: '{original}' debe escribirse '{corregido}'"
+        return f"Tilde y mayúscula corregidas: '{original}' → '{corregido}'"
 
-    return f"Ortografía: '{original}' se escribe '{corregido}'"
+    return f"Ortografía corregida: '{original}' → '{corregido}'"

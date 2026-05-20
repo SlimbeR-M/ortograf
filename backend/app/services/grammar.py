@@ -1,4 +1,5 @@
 import re
+from app.services.postprocess import _GEONOMBRES as _GEONOMBRES_GEOGRAFICOS
 
 # ─── Contextos bloqueadores ───────────────────────────────────────────────────
 
@@ -867,6 +868,7 @@ VERBOS_PASADO_1RA = {
     "desperto": "despertó", "aprovecho": "aprovechó", "visito": "visitó",
     "recorrio": "recorrió", "encontro": "encontró", "ayudo": "ayudó",
     "cambio": "cambió", "arreglo": "arregló", "limpio": "limpió",
+    "nado": "nadó", "inicio": "inició",
     "cocino": "cocinó", "madrago": "madrogó", "escucho": "escuchó",
     "miro": "miró", "espero": "esperó", "firmo": "firmó",
     "paso": "pasó", "noto": "notó", "marco": "marcó",
@@ -921,6 +923,11 @@ VERBOS_PASADO_1RA = {
     "analizo": "analizó", "resumio": "resumió",
     "concluyo": "concluyó", "determino": "determinó", "establacio": "estableció",
     "radico": "radicó",
+    "convoco": "convocó", "fabrico": "fabricó", "critico": "criticó",
+    "clasifico": "clasificó", "unifico": "unificó",
+    "identifico": "identificó", "justifico": "justificó",
+    "adopto": "adoptó", "adapto": "adaptó", "reformo": "reformó",
+    "promovio": "promovió", "retiro": "retiró",
 }
 
 VERBOS_FUTURO = {
@@ -1548,7 +1555,20 @@ def correct_grammar(text: str) -> str:
             "apoyo", "empleo", "ensayo", "relevo", "relato", "cargo",
             "mando", "manejo", "arreglo", "ajuste", "rechazo", "retraso",
             "reemplazo", "rescate", "repaso", "reflejo", "remedio",
-            "recurso", "riesgo", "resumen", "turno", "paso"}
+            "recurso", "riesgo", "resumen", "turno", "paso",
+            "anuncio", "acuerdo", "intento", "aumento", "decreto",
+            "impacto", "resultado", "efecto",
+            "indico",  # indicar (pasado) vs adjetivo geográfico "índico"
+            "critico",  # criticar (pasado) vs adjetivo/sustantivo "crítico"
+            "diagnostico",  # diagnosticar (pasado) vs sustantivo "diagnóstico"
+            }
+
+    # Formas esdrújulas correctas para palabras en AMBIGUOS cuando son sustantivos/adjetivos
+    _FORMAS_ESDRUJULO = {
+        "diagnostico": "diagnóstico",
+        "critico": "crítico",
+        "termino": "término",
+    }
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
                        "deseo", "uso", "tomo", "como",
@@ -1562,7 +1582,8 @@ def correct_grammar(text: str) -> str:
                            "algo", "nada", "hasta", "para", "cuando"}
 
     def _es_futuro(palabra: str) -> bool:
-        return bool(re.search(r'[áéíóú]$', palabra.lower()))
+        # Solo verdaderos futuros verbales: terminan en r + vocal acentuada (hablará, vendrá…)
+        return bool(re.search(r'r[áéíóú][sn]?$', palabra.lower()))
 
     palabras = text.split()
     resultado = []
@@ -1624,13 +1645,49 @@ def correct_grammar(text: str) -> str:
                               "costo", "costó", "habia", "había",
                               "costado", "escolar", "nuevo",
                               "duro", "mucho", "poco"}
-            if nucleo in AMBIGUOS and (
-                anterior in _AMBIGUOS_BLOQ or
-                anterior_a_que in {"el", "al", "un", "la", "una", "mi", "tu",
-                                   "su", "del", "este", "ese", "aquel",
-                                   "nuestro", "cada", "de", "por", "para", "con"}
-            ):
+            # Adjetivos que aparecen entre determinante y sustantivo en "DET ADJ SUST":
+            # solo ellos habilitan la búsqueda dos posiciones atrás (anterior_a_que).
+            # Sujetos-sustantivo como "médico", "juez", "rector" no están aquí → no
+            # alcanzan hasta el "el" que los precede para confundir verbo con sustantivo.
+            _MODS_PREVIOS = {"buen", "gran", "mal", "bien", "mejor", "peor",
+                             "primer", "último", "cierto", "cierta",
+                             "propio", "propia", "mismo", "misma"}
+            _SUFIJOS_ADJ = ("al", "oso", "osa", "ico", "ica", "ivo", "iva",
+                            "ble", "ante", "iente", "ado", "ada", "ido", "ida")
+            _ARTS_DIRECTOS = {"el", "la", "los", "las", "un", "una", "al", "del"}
+            if nucleo in AMBIGUOS and siguiente == "que" and anterior not in _ARTS_DIRECTOS:
+                # "SUJETO verbo que [cláusula]" → verbo pasado introduce cláusula sustantiva
+                corregido = VERBOS_PASADO_1RA[nucleo]
+                if palabra[0].isupper():
+                    corregido = corregido[0].upper() + corregido[1:]
+                resultado.append(corregido)
+            elif (nucleo in AMBIGUOS and nucleo in _GEONOMBRES_GEOGRAFICOS
+                  and siguiente != "que"
+                  and anterior_orig not in FORZADORES_PASADO):
+                # RAE: adjetivo geográfico (ej: "océano índico") → preservar sin tilde verbal;
+                # postprocess lo capitalizará como nombre propio geográfico.
                 resultado.append(palabra)
+            elif nucleo in AMBIGUOS and siguiente not in {
+                "la", "el", "los", "las", "un", "una", "unas", "unos"
+            } and (siguiente != "" or anterior in _AMBIGUOS_BLOQ) and (
+                anterior in _AMBIGUOS_BLOQ or
+                (anterior_a_que in {"el", "al", "un", "la", "una", "mi", "tu",
+                                    "su", "del", "este", "ese", "aquel",
+                                    "nuestro", "cada", "de", "por", "para", "con"}
+                 and (anterior in _AMBIGUOS_BLOQ or anterior in _MODS_PREVIOS)) or
+                (len(siguiente) >= 4 and
+                 any(siguiente.endswith(s) for s in _SUFIJOS_ADJ))
+            ):
+                # Sustantivo/adjetivo: aplicar forma esdrújula si corresponde
+                if nucleo in _FORMAS_ESDRUJULO:
+                    _m_suf_e = re.search(r'(["\'\?!,\.;:\)\]]+)$', palabra)
+                    _suf_e = _m_suf_e.group(1) if _m_suf_e else ""
+                    esdruj_form = _FORMAS_ESDRUJULO[nucleo]
+                    if palabra[0].isupper():
+                        esdruj_form = esdruj_form[0].upper() + esdruj_form[1:]
+                    resultado.append(esdruj_form + _suf_e)
+                else:
+                    resultado.append(palabra)
             else:
                 corregido = VERBOS_PASADO_1RA[nucleo]
                 if palabra[0].isupper():

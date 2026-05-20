@@ -1,9 +1,41 @@
 import re
+import json
+import os
 from difflib import SequenceMatcher
 import language_tool_python
 
 tool = language_tool_python.LanguageTool("es")
 PLACEHOLDER_PATTERN = re.compile(r'__TECH_\d+__')
+_GEO_PH_PAT = re.compile(r'__GEO\d+__')
+
+# ---------------------------------------------------------------------------
+# Topónimos compuestos — protección ante LanguageTool
+# Se cargan al inicio del módulo (mismo JSON que postprocess.py).
+# Antes de pasarle el texto a LT, cada topónimo compuesto se reemplaza por
+# un placeholder __GEO{n}__ para que LT no lo toque ni lo corrompa.
+# Después de aplicar las correcciones de LT, los placeholders se restauran
+# a sus formas canónicas del JSON.
+# ---------------------------------------------------------------------------
+_DATOS_SPELL = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+try:
+    with open(os.path.join(_DATOS_SPELL, 'toponimos_compuestos.json'), encoding='utf-8') as _fsp:
+        _TOPONIMOS_SPELL = sorted(json.load(_fsp)['paises_compuestos'], key=len, reverse=True)
+except (OSError, KeyError, json.JSONDecodeError):
+    _TOPONIMOS_SPELL = []
+
+# Tabla de normalización de tildes para hacer match de entradas sin acentar
+_ACCENT_MAP = str.maketrans('áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')
+
+# Pre-compilar patrones: para cada topónimo, patrón exacto (con IGNORECASE)
+# más patrón sin tildes (solo cuando difieren), para capturar input sin acentar.
+_TOP_PATTERNS: list[tuple[str, list[re.Pattern]]] = []
+for _top in _TOPONIMOS_SPELL:
+    _pats = [re.compile(r'\b' + re.escape(_top) + r'\b', re.IGNORECASE)]
+    _stripped = _top.translate(_ACCENT_MAP)
+    if _stripped != _top:
+        _pats.append(re.compile(r'\b' + re.escape(_stripped) + r'\b', re.IGNORECASE))
+    _TOP_PATTERNS.append((_top, _pats))
+
 
 RAICES_TECNICAS = {
     "deploy", "build", "debug", "fix", "push", "pull", "fetch",
@@ -35,6 +67,12 @@ TILDES_DIACRITICAS = {
 VERBOS_TILDE_PROTEGIDOS = {
     "publico",   # publicó (verbo) vs público (adj) — grammar.py decide
 }
+
+# Importación diferida para evitar referencias en tiempo de módulo;
+# grammar.py no importa spelling.py → sin circular.
+def _get_verbos_pasado():
+    from app.services.grammar import VERBOS_PASADO_1RA
+    return VERBOS_PASADO_1RA
 
 FUTUROS_PROTEGIDOS = {
     "dara", "hara", "tendra", "podra", "querra", "vendra",
@@ -68,7 +106,12 @@ def _tiene_raiz_tecnica(palabra: str) -> bool:
 
 def _es_verbo_tecnico(palabra: str) -> bool:
     p = palabra.lower()
-    sufijos = ('ear', 'eando', 'eado', 'ea', 'eas', 'eo', 'ean')
+    # Solo sufijos largos y específicos de anglicismos verbales (-ear/-eando/-eado/-ean).
+    # Se excluye "eo"/"ea"/"eas": son terminaciones de centenares de palabras españolas
+    # legítimas (contemporáneo, europeo, idea, marea…) que LT sí necesita corregir.
+    # Las formas en -eo/-ea/-eas de anglicismos técnicos (deployeo, buildea…) ya quedan
+    # protegidas por _tiene_raiz_tecnica() porque su raíz está en RAICES_TECNICAS.
+    sufijos = ('ear', 'eando', 'eado', 'ean')
     if any(p.endswith(s) for s in sufijos):
         return True
     if _tiene_raiz_tecnica(p):
@@ -77,15 +120,32 @@ def _es_verbo_tecnico(palabra: str) -> bool:
 
 
 def correct_spelling(text: str) -> str:
-    matches = tool.check(text)
+    # -----------------------------------------------------------------------
+    # Fase 1: proteger topónimos compuestos antes de LanguageTool
+    # -----------------------------------------------------------------------
+    geo_slots: dict[str, str] = {}
+    protected = text
+    for i, (canonical, pats) in enumerate(_TOP_PATTERNS):
+        key: str | None = None
+        for pat in pats:
+            if pat.search(protected):
+                if key is None:
+                    key = f'__GEO{i}__'
+                    geo_slots[key] = canonical
+                protected = pat.sub(key, protected)
+
+    # -----------------------------------------------------------------------
+    # Fase 2: corrección ortográfica con LanguageTool
+    # -----------------------------------------------------------------------
+    matches = tool.check(protected)
     matches_seguros = []
 
     for m in matches:
-        fragmento = text[m.offset:m.offset + m.error_length]
+        fragmento = protected[m.offset:m.offset + m.error_length]
         frag_lower = fragmento.lower()
 
-        # Ignorar placeholders
-        if PLACEHOLDER_PATTERN.search(fragmento):
+        # Ignorar placeholders (tech y geo)
+        if PLACEHOLDER_PATTERN.search(fragmento) or _GEO_PH_PAT.search(fragmento):
             continue
 
         # Bloquear tildes diacríticas
@@ -97,6 +157,31 @@ def correct_spelling(text: str) -> str:
         # Proteger verbos que grammar.py acentúa según contexto
         if any(p in VERBOS_TILDE_PROTEGIDOS for p in frag_lower.split()):
             continue
+
+        # Regla RAE: si la palabra es un verbo en pasado que grammar.py tildará
+        # contextualmente (ej: "indico" → "indicó"), bloquear cualquier tilde
+        # en posición errónea que LT proponga (ej: "índico" esdrújula).
+        if m.replacements and frag_lower in _get_verbos_pasado():
+            expected_verb = _get_verbos_pasado()[frag_lower]
+            if m.replacements[0].lower() != expected_verb:
+                continue
+
+        # Bloquear la regla SE_CREO2 de LT cuando añade tilde a vocal final de
+        # una palabra no reconocida como verbo pretérito. SE_CREO2 se confunde
+        # con nombres propios llanos terminados en vocal (ej: "pablo" → "pabló").
+        # RAE: palabras llanas terminadas en vocal no llevan tilde; SE_CREO2
+        # solo debe operar sobre verbos pretéritos confirmados en VERBOS_PASADO_1RA.
+        # (SE_CREO sin sufijo sí es correcto: "celebro"→"celebró", "noto"→"notó")
+        if (m.rule_id == "SE_CREO2" and
+                frag_lower not in _get_verbos_pasado() and
+                m.replacements):
+            repl_lower = m.replacements[0].lower()
+            if (len(frag_lower) == len(repl_lower) and
+                    frag_lower[-1] in 'aeiou' and
+                    repl_lower[-1] in 'áéíóú' and
+                    frag_lower[:-1] == repl_lower[:-1].translate(
+                        str.maketrans('áéíóú', 'aeiou'))):
+                continue
 
         # Proteger pronombres clíticos
         if frag_lower in CLITICOS_PROTEGIDOS:
@@ -110,9 +195,20 @@ def correct_spelling(text: str) -> str:
             if cliticos_perdidos:
                 continue
 
+        # Bloquear AGREEMENT_POSTPONED_ADJ cuando el adjetivo pospuesto sigue
+        # inmediatamente a un participio pasado (-ado/-ido): LT confunde el
+        # participio con el sustantivo antecedente del adjetivo y propone un
+        # cambio de género incorrecto (ej: "habían adoptado nuevas técnicas"
+        # → "nuevo técnicas"). RAE §33.5: el adjetivo concuerda con el
+        # sustantivo al que se refiere, no con el participio precedente.
+        if m.rule_id == "AGREEMENT_POSTPONED_ADJ" and m.replacements:
+            _prev_ctx = protected[max(0, m.offset - 50):m.offset]
+            _prev_tokens = _prev_ctx.split()
+            _prev_word = re.sub(r'\W+$', '', _prev_tokens[-1]).lower() if _prev_tokens else ""
+            if re.search(r'[ai]do$', _prev_word):
+                continue
+
         # Bloquear reemplazos multi-palabra problemáticos
-        # Cuando mismo número de palabras y NINGUNA se mantiene igual →
-        # LT está haciendo concordancia masiva incorrecta ("esperado gracias" → "esperada gracia")
         if m.replacements:
             orig_words = frag_lower.split()
             repl_words = m.replacements[0].lower().split()
@@ -120,7 +216,39 @@ def correct_spelling(text: str) -> str:
                 if len(orig_words) == len(repl_words):
                     n_same = sum(1 for o, r in zip(orig_words, repl_words) if o == r)
                     if n_same == 0:
-                        continue
+                        # Permitir si TODAS las diferencias son solo tildes (RAE: nombres propios)
+                        all_accent_only = all(
+                            o.translate(_ACCENT_MAP) == r.translate(_ACCENT_MAP)
+                            for o, r in zip(orig_words, repl_words)
+                        )
+                        if not all_accent_only:
+                            # Primer reemplazo cambia formas de palabra (ej: "comisiona probara").
+                            # Buscar entre las alternativas una con cambios de solo tilde.
+                            _mejor = None
+                            for _alt in m.replacements[1:]:
+                                _aw = _alt.lower().split()
+                                if len(_aw) == len(orig_words):
+                                    _ac = [(o, r) for o, r in zip(orig_words, _aw) if o != r]
+                                    if _ac and all(
+                                        o.translate(_ACCENT_MAP) == r.translate(_ACCENT_MAP)
+                                        for o, r in _ac
+                                    ):
+                                        _mejor = _alt
+                                        break
+                            if _mejor is None:
+                                continue
+                            m.replacements.insert(0, _mejor)
+                    else:
+                        # Bloquear si los cambios son SOLO de número (singular/plural) —
+                        # estas "correcciones" de concordancia adj-sustantivo tratan
+                        # incorrectamente nombres propios como pares comunes.
+                        changed = [(o, r) for o, r in zip(orig_words, repl_words) if o != r]
+                        if changed and all(
+                            o.rstrip('s') == r.rstrip('s') and
+                            (o.endswith('s') or r.endswith('s'))
+                            for o, r in changed
+                        ):
+                            continue
                 else:
                     sim = SequenceMatcher(None, frag_lower, m.replacements[0].lower()).ratio()
                     if sim < 0.7:
@@ -129,8 +257,7 @@ def correct_spelling(text: str) -> str:
         if m.replacements and "buen" in frag_lower and "bien" in m.replacements[0].lower():
             continue
 
-        # Bloquear "quien" → "quién" cuando es pronombre relativo (no interrogativo)
-        # RAE: solo lleva tilde en interrogativas/exclamativas directas e indirectas
+        # Bloquear "quien" → "quién" cuando es pronombre relativo
         if (frag_lower == "quien" and m.replacements and
                 m.replacements[0].lower() == "quién"):
             _VERBOS_INTERROG = {
@@ -152,7 +279,7 @@ def correct_spelling(text: str) -> str:
         if m.replacements and frag_lower == "a el" and m.replacements[0].lower() == "al":
             continue
 
-        # Bloquear "el" → "en" (error de LanguageTool con "según el", etc.)
+        # Bloquear "el" → "en"
         if m.replacements and "el" in frag_lower and m.replacements[0].lower() == "en":
             continue
 
@@ -160,12 +287,10 @@ def correct_spelling(text: str) -> str:
         if frag_lower in FUTUROS_PROTEGIDOS:
             continue
 
-        # Bloquear si el fragmento contiene un verbo en futuro
         fragmento_palabras = frag_lower.split()
         if any(p in FUTUROS_PROTEGIDOS for p in fragmento_palabras):
             continue
 
-        # Ignorar palabras cortas protegidas
         if frag_lower in PALABRAS_CORTAS_PROTEGIDAS:
             continue
 
@@ -191,4 +316,50 @@ def correct_spelling(text: str) -> str:
 
         matches_seguros.append(m)
 
-    return language_tool_python.utils.correct(text, matches_seguros)
+    result = language_tool_python.utils.correct(protected, matches_seguros)
+
+    # -----------------------------------------------------------------------
+    # Fase 2b: pase secundario — tildes en palabras capitalizadas que LT omite
+    # porque las trata como nombres propios válidos (ej. "Jose" → "José").
+    # RAE: los nombres propios siguen las mismas reglas de acentuación.
+    # -----------------------------------------------------------------------
+    _cap_lower: dict[str, str] = {}
+    for _tok in result.split():
+        _core = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]', '', _tok)
+        if _core and _core[0].isupper() and not re.search(r'[áéíóúü]', _core):
+            _lw = _core.lower()
+            if _lw not in _cap_lower:
+                _cap_lower[_lw] = _core
+    if _cap_lower:
+        _batch = '\n'.join(_cap_lower)
+        _accent_fixes: dict[str, str] = {}
+        for _m in tool.check(_batch):
+            if not _m.replacements:
+                continue
+            _frag = _batch[_m.offset:_m.offset + _m.error_length]
+            if '\n' in _frag or ' ' in _frag or _frag not in _cap_lower:
+                continue
+            _repl = _m.replacements[0].lower()
+            if (_frag, _repl) in TILDES_DIACRITICAS:
+                continue
+            if _frag.translate(_ACCENT_MAP) == _repl.translate(_ACCENT_MAP) and _frag != _repl:
+                _accent_fixes[_frag] = _repl
+        if _accent_fixes:
+            def _fix_cap(tok, _af=_accent_fixes):
+                _c = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]', '', tok)
+                if not _c or not _c[0].isupper():
+                    return tok
+                _lw = _c.lower()
+                if _lw in _af:
+                    _acc = _af[_lw][0].upper() + _af[_lw][1:]
+                    return tok.replace(_c, _acc, 1)
+                return tok
+            result = ' '.join(_fix_cap(t) for t in result.split())
+
+    # -----------------------------------------------------------------------
+    # Fase 3: restaurar topónimos a sus formas canónicas del JSON
+    # -----------------------------------------------------------------------
+    for key, canonical in geo_slots.items():
+        result = result.replace(key, canonical)
+
+    return result

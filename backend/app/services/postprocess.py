@@ -1,4 +1,13 @@
 import re
+import json
+import os
+
+_DATOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+try:
+    with open(os.path.join(_DATOS, 'toponimos_compuestos.json'), encoding='utf-8') as _f:
+        _TOPONIMOS = sorted(json.load(_f)['paises_compuestos'], key=len, reverse=True)
+except (OSError, KeyError, json.JSONDecodeError):
+    _TOPONIMOS = []
 
 
 def finalize_text(text: str) -> str:
@@ -22,8 +31,213 @@ _TITULOS_RAE_RE = re.compile(
 )
 
 
+def _coma_en_enumeracion_nombres_propios(text: str) -> str:
+    """
+    RAE: en enumeraciones de 3+ elementos, todos los intermedios llevan coma.
+    Inserta comas entre elementos con el patrón ELEM (placeholder | WORD).
+    Los topónimos compuestos deben estar protegidos con __TOPn__ placeholders
+    antes de llamar; la protección y restauración las gestiona el llamador.
+    """
+    _WORD = r'[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,}'
+    _HOLD = r'__TOP\d+__'
+    _GENT = (
+        r'(?:Latina|Latino|Central|Oriental|Occidental'
+        r'|Septentrional|Meridional|Austral|Boreal)'
+    )
+    ELEM = r'(?:' + _HOLD + r'|' + _WORD + r')'
+
+    patron = re.compile(
+        r'(' + ELEM + r') (?!' + _GENT + r'\b)(' + ELEM + r')'
+        r'(?=(?:(?:, | )' + ELEM + r')* (?:y|o|ni) ' + ELEM + r')'
+    )
+
+    anterior = None
+    while anterior != text:
+        anterior = text
+        text = patron.sub(lambda m: m.group(1) + ', ' + m.group(2), text)
+
+    return text
+
+
+_GEONOMBRES = {
+    "caribe": "Caribe",
+    "mediterráneo": "Mediterráneo",
+    "mediterraneo": "Mediterráneo",
+    "atlántico": "Atlántico",
+    "atlantico": "Atlántico",
+    "pacífico": "Pacífico",
+    "pacifico": "Pacífico",
+    "índico": "Índico",
+    "indico": "Índico",
+    "ártico": "Ártico",
+    "artico": "Ártico",
+    "antártico": "Antártico",
+    "antartico": "Antártico",
+    "andes": "Andes",
+    "amazonas": "Amazonas",
+    "sáhara": "Sáhara",
+    "sahara": "Sáhara",
+    "himalaya": "Himalaya",
+    "nilo": "Nilo",
+    "danubio": "Danubio",
+    "pirineos": "Pirineos",
+    "alpes": "Alpes",
+    "orinoco": "Orinoco",
+    "everest": "Everest",
+    "titicaca": "Titicaca",
+    "kilimanjaro": "Kilimanjaro",
+    "urales": "Urales",
+    "volga": "Volga",
+    "congo": "Congo",
+    "ganges": "Ganges",
+    "mekong": "Mekong",
+    "zambeze": "Zambeze",
+    "rin": "Rin",
+    "sena": "Sena",
+    "támesis": "Támesis",
+    "tamesis": "Támesis",
+    "éufrates": "Éufrates",
+    "eufrates": "Éufrates",
+    "tigris": "Tigris",
+    "balcanes": "Balcanes",
+    "cáucaso": "Cáucaso",
+    "caucaso": "Cáucaso",
+    "níger": "Níger",
+    "niger": "Níger",
+}
+
+
+def _capitalizar_geonombres_en_contexto(text: str) -> str:
+    """
+    RAE: nombres propios geográficos llevan mayúscula en cualquier posición,
+    incluso cuando no siguen directamente a un artículo
+    (ej: 'océano índico' → 'océano Índico').
+    Se aplica como pase complementario al de artículo+geonombre.
+    Las formas sin tilde que son también verbos (ej: 'indico') no se
+    capitalizan en inicio de oración, donde son ambiguas con el presente.
+    """
+    _TILDES_VOCALES = set('áéíóúü')
+    _INICIO_ORACION = re.compile(r'(?:^|[.!?]\s+)\Z')
+
+    def _fix(m):
+        key_lower = m.group(0).lower()
+        canonical = _GEONOMBRES.get(key_lower)
+        if canonical is None:
+            return m.group(0)
+        # Formas sin tilde: verificar que no estén en posición de verbo (inicio de oración)
+        if not any(c in key_lower for c in _TILDES_VOCALES):
+            prefijo = text[:m.start()]
+            if not prefijo.strip() or _INICIO_ORACION.search(prefijo):
+                return m.group(0)
+        return canonical
+
+    all_keys = sorted(_GEONOMBRES.keys(), key=len, reverse=True)
+    pat = re.compile(
+        r'\b(?:' + '|'.join(re.escape(k) for k in all_keys) + r')\b',
+        re.IGNORECASE
+    )
+    return pat.sub(_fix, text)
+
+
+def _capitalizar_nombres_geograficos_con_articulo(text: str) -> str:
+    """
+    RAE: nombres propios geográficos llevan mayúscula aunque vayan
+    precedidos de artículo ('el caribe' → 'el Caribe').
+    Solo actúa cuando el nombre geográfico está en minúscula.
+    """
+    def _fix(m):
+        art = m.group(1)
+        correcto = _GEONOMBRES.get(m.group(2).lower())
+        if correcto:
+            return art + correcto
+        return m.group(0)
+
+    return re.sub(
+        r'(\b(?:[Ee]l|[Ll]a|[Ll]os|[Ll]as)\s+)([a-záéíóúüñ][a-záéíóúüñ]*)',
+        _fix,
+        text
+    )
+
+
+def _capitalizar_toponimos_compuestos(text: str) -> str:
+    """
+    RAE: en nombres geográficos compuestos, cada elemento que integra el nombre
+    propio lleva mayúscula inicial. No capitaliza artículos ni preposiciones
+    internas ('del', 'de', 'la'…) ni palabras no gentilicias/direccionales.
+    """
+    GENTILICIOS_TOPONIMO = {
+        "latina", "latino", "central", "norte", "sur",
+        "oriental", "occidental", "septentrional",
+        "meridional", "austral", "boreal", "subsahariana",
+    }
+
+    def _fix(m):
+        primera = m.group(1)
+        segunda = m.group(2)
+        if segunda.lower() in GENTILICIOS_TOPONIMO:
+            return primera + ' ' + segunda.capitalize()
+        return m.group(0)
+
+    text = re.sub(
+        r'\b([A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,}) ([a-záéíóúüñ]+)\b',
+        _fix,
+        text
+    )
+
+    # Topónimos con preposición intermedia: "América del Sur", "Corea del Norte"
+    # RAE: los cardinales forman parte del nombre propio → mayúscula inicial
+    CARDINALES_PREP = {
+        "norte", "sur", "este", "oeste", "oriente", "occidente",
+        "latina", "latino", "central", "oriental", "occidental",
+        "septentrional", "meridional", "austral", "boreal",
+    }
+
+    def _fix_prep(m):
+        if m.group(3).lower() in CARDINALES_PREP:
+            return m.group(1) + ' ' + m.group(2).lower() + ' ' + m.group(3).capitalize()
+        return m.group(0)
+
+    return re.sub(
+        r'\b([A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,}) ([Dd]el|[Dd]e) ([A-ZÁÉÍÓÚÜÑa-záéíóúüñ][a-záéíóúüñ]*)\b',
+        _fix_prep,
+        text
+    )
+
+
+_WORD_CAP = r'[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{2,}'
+_REVERTIR_COMA_NOMBRES = re.compile(
+    r'(' + _WORD_CAP + r'), (' + _WORD_CAP + r') (y|o|ni) (' + _WORD_CAP + r') (' + _WORD_CAP + r')'
+)
+
+
 def _finalizar_parrafo(text: str) -> str:
     text = text.strip()
+
+    # Proteger topónimos compuestos con placeholders ANTES de insertar comas y
+    # de aplicar _REVERTIR_COMA_NOMBRES. Mientras los placeholders (__TOPn__)
+    # estén activos, _REVERTIR no puede confundir "Japón, Australia y __TOP__"
+    # con un par nombre+apellido, porque __TOPn__ no coincide con _WORD_CAP.
+    # La restauración ocurre justo después del revert.
+    slots: dict[str, str] = {}
+    for i, top in enumerate(_TOPONIMOS):
+        pat = re.compile(r'\b' + re.escape(top) + r'\b', re.IGNORECASE)
+        if pat.search(text):
+            key = f'__TOP{i}__'
+            slots[key] = top
+            text = pat.sub(key, text)
+
+    text = _coma_en_enumeracion_nombres_propios(text)
+
+    # RAE: en "Nombre Apellido y Nombre Apellido" no se inserta coma entre
+    # nombre y apellido. Si la función anterior añadió coma dentro de un par
+    # compuesto (Cap, Cap y Cap Cap), se revierte; distinguible porque tras
+    # el conector "y/o/ni" vienen DOS palabras capitalizadas (apellidos incluidos).
+    # Con los placeholders aún activos, los topónimos compuestos no se ven afectados.
+    text = _REVERTIR_COMA_NOMBRES.sub(r'\1 \2 \3 \4 \5', text)
+
+    # Restaurar topónimos a sus formas canónicas
+    for key, canonical in slots.items():
+        text = text.replace(key, canonical)
 
     # Títulos ante nombre propio → minúscula según RAE (no al inicio de oración)
     text = _TITULOS_RAE_RE.sub(lambda m: m.group(1).lower(), text)
@@ -75,6 +289,10 @@ def _finalizar_parrafo(text: str) -> str:
                r'\bMl\b': 'ML', r'\bNlp\b': 'NLP'}
     for patron, sigla in _SIGLAS.items():
         text = re.sub(patron, sigla, text)
+
+    text = _capitalizar_toponimos_compuestos(text)
+    text = _capitalizar_nombres_geograficos_con_articulo(text)
+    text = _capitalizar_geonombres_en_contexto(text)
 
     if not text.endswith(("?", ".", "!", "...", "¿", "¡")):
         text += "."
