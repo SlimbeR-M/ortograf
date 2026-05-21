@@ -206,18 +206,36 @@ def capitalizar_entidades(text: str) -> str:
     # Estrategia 6: nombre propio precedido de título (TITULOS_MINUSCULA).
     # Cubre "la doctora ana vega" cuando spaCy no detecta entidad PER porque
     # el primer token del nombre tiene pos_=ADJ (ej: "ana") y no PROPN.
+    # Paso 0: precargar _titulo_con_nombre desde appos PER ya detectadas por spaCy.
+    #   Previene que Paso 1 capitalice tokens POSTERIORES al nombre cuando spaCy
+    #   detectó el nombre en PER pero siguió asignando appos adicionales al título
+    #   (ej: "ana campo" → PER, pero spaCy pone "desarrollo", "metodologia" también
+    #   como appos de "doctora" → sin esta guarda los capitalizaría incorrectamente).
     # Paso 1: capitalizar el nombre que aparece como dep=appos del título.
     # Paso 2: capitalizar el apellido que sigue como dep=amod del mismo título.
     # Guarda: no toca tokens con entidad (ya manejados por E1), no capitaliza
     # formas verbales con tilde de pretérito (ó/é), y el apellido debe aparecer
     # DESPUÉS del nombre en el texto (para no capitalizar adjetivos pre-posicionados).
-    _titulo_con_nombre: dict[int, int] = {}  # título.idx → nombre.idx
+    _titulo_con_nombre: dict[int, int] = {}  # título.idx → último nombre.idx
+    for token in doc:
+        if (token.dep_ == "appos" and
+                token.head.text in TITULOS_MINUSCULA and
+                token.head.ent_type_ == "" and
+                token.ent_type_ == "PER"):
+            prev = _titulo_con_nombre.get(token.head.idx, -1)
+            if token.idx > prev:
+                _titulo_con_nombre[token.head.idx] = token.idx
     for token in doc:
         if (token.ent_type_ == "" and
                 not token.is_stop and
                 token.dep_ == "appos" and
                 token.head.text in TITULOS_MINUSCULA and
                 token.head.ent_type_ == ""):
+            # Si ya hay un appos PER del mismo título ANTES de este token,
+            # spaCy detectó el nombre → este token no es parte del nombre.
+            per_nombre_idx = _titulo_con_nombre.get(token.head.idx, -1)
+            if per_nombre_idx >= 0 and per_nombre_idx < token.idx:
+                continue
             _end = token.idx + len(token.text)
             _orig = ''.join(resultado[token.idx:_end]) if _end <= len(resultado) else ''
             if not any(_orig.endswith(t) for t in ('ó', 'é', 'ó.', 'é.')):
