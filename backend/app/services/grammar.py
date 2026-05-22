@@ -1561,6 +1561,7 @@ def correct_grammar(text: str) -> str:
             "indico",  # indicar (pasado) vs adjetivo geográfico "índico"
             "critico",  # criticar (pasado) vs adjetivo/sustantivo "crítico"
             "diagnostico",  # diagnosticar (pasado) vs sustantivo "diagnóstico"
+            "diseño",  # diseñar (pasado) vs sustantivo "diseño"
             }
 
     # Formas esdrújulas correctas para palabras en AMBIGUOS cuando son sustantivos/adjetivos
@@ -1644,7 +1645,8 @@ def correct_grammar(text: str) -> str:
                               "a", "por", "para", "con", "sin",
                               "costo", "costó", "habia", "había",
                               "costado", "escolar", "nuevo",
-                              "duro", "mucho", "poco"}
+                              "duro", "mucho", "poco",
+                              "incluye", "incluyen", "incluía"}
             # Adjetivos que aparecen entre determinante y sustantivo en "DET ADJ SUST":
             # solo ellos habilitan la búsqueda dos posiciones atrás (anterior_a_que).
             # Sujetos-sustantivo como "médico", "juez", "rector" no están aquí → no

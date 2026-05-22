@@ -34,7 +34,13 @@ _TITULOS_RAE_RE = re.compile(
 def _coma_en_enumeracion_nombres_propios(text: str) -> str:
     """
     RAE: en enumeraciones de 3+ elementos, todos los intermedios llevan coma.
-    Inserta comas entre elementos con el patrón ELEM (placeholder | WORD).
+    Inserta comas entre elementos con el patrón ELEM.
+    ELEM cubre:
+      - Placeholder de topónimo compuesto: __TOPn__
+      - Artículo + 1-2 palabras (cualquier caso, 3+ chars): "el Caribe",
+        "la salud", "el océano Índico", "el medio ambiente"
+      - Palabra capitalizada (4+ chars): "Europa", "Asia"
+    La coma se inserta ANTES del artículo del siguiente elemento.
     Los topónimos compuestos deben estar protegidos con __TOPn__ placeholders
     antes de llamar; la protección y restauración las gestiona el llamador.
     """
@@ -44,7 +50,12 @@ def _coma_en_enumeracion_nombres_propios(text: str) -> str:
         r'(?:Latina|Latino|Central|Oriental|Occidental'
         r'|Septentrional|Meridional|Austral|Boreal)'
     )
-    ELEM = r'(?:' + _HOLD + r'|' + _WORD + r')'
+    # Artículo + 1-2 palabras de cualquier caso (3+ chars cada una).
+    # Cubre: "el Caribe" (art+Cap), "la salud" (art+lower), "el océano Índico"
+    # (art+lower+Cap), "el medio ambiente" (art+lower+lower).
+    _ART_WORD = r'[a-záéíóúüñA-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{2,}'
+    _ART_ELEM = r'(?:el|la|los|las) ' + _ART_WORD + r'(?: ' + _ART_WORD + r')?'
+    ELEM = r'(?:' + _HOLD + r'|' + _ART_ELEM + r'|' + _WORD + r')'
 
     patron = re.compile(
         r'(' + ELEM + r') (?!' + _GENT + r'\b)(' + ELEM + r')'
@@ -57,6 +68,48 @@ def _coma_en_enumeracion_nombres_propios(text: str) -> str:
         text = patron.sub(lambda m: m.group(1) + ', ' + m.group(2), text)
 
     return text
+
+
+def _coma_en_enumeracion_sustantivos(text: str) -> str:
+    """
+    RAE §91.2.1: en una enumeración de 3+ grupos nominales comunes sin coma,
+    todos los intermedios llevan coma. Complementa _coma_en_enumeracion_nombres_propios,
+    que cubre nombres propios y elementos precedidos de artículo.
+    Solo actúa sobre palabras de contenido en minúscula (los nombres propios
+    capitalizados están cubiertos por la función anterior).
+    Conservadora: requiere ≥3 elementos; excluye formas verbales comunes.
+    """
+    _FUNC = frozenset({
+        'sobre', 'entre', 'desde', 'hasta', 'según', 'hacia',
+        'durante', 'mediante', 'contra', 'porque', 'aunque',
+        'cuando', 'donde', 'mientras', 'también', 'tampoco',
+        'estos', 'estas', 'esos', 'esas', 'aquellos', 'aquellas',
+    })
+    # Palabra de contenido: 5+ chars minúscula, no termina en tilde pretérito
+    # (ó/é/á/í), no termina en sufijo de 3ª plural pretérito (-aron/-eron/-ieron),
+    # no termina en -uye (conjugación presente de verbos -uir: incluye, construye…;
+    # ningún sustantivo español termina en -uye).
+    _WORD = (
+        r'[a-záéíóúüñ]{5,}'
+        r'(?<![óéáí])'
+        r'(?<!aron)(?<!eron)(?<!ieron)'
+        r'(?<!uye)'
+    )
+    # GN: 1-2 palabras de contenido consecutivas
+    _GN = r'(?:' + _WORD + r'(?:\s+' + _WORD + r')?)'
+
+    patron = re.compile(
+        r'(' + _GN + r') (' + _GN + r')'
+        r'(?=(?:(?:, | )' + _GN + r')* (?:y|o|ni) ' + _GN + r')'
+    )
+
+    def _sub(m):
+        for w in (m.group(1) + ' ' + m.group(2)).split():
+            if w.lower() in _FUNC:
+                return m.group(0)
+        return m.group(1) + ', ' + m.group(2)
+
+    return patron.sub(_sub, text)
 
 
 _GEONOMBRES = {
@@ -238,6 +291,11 @@ def _finalizar_parrafo(text: str) -> str:
     # Restaurar topónimos a sus formas canónicas
     for key, canonical in slots.items():
         text = text.replace(key, canonical)
+
+    # RAE §91.2.1: comas en enumeraciones de sustantivos comunes sin artículo
+    # (ej: "cambio climático energía renovable y desarrollo tecnológico").
+    # Corre DESPUÉS de restaurar topónimos para no afectar placeholders.
+    text = _coma_en_enumeracion_sustantivos(text)
 
     # Títulos ante nombre propio → minúscula según RAE (no al inicio de oración)
     text = _TITULOS_RAE_RE.sub(lambda m: m.group(1).lower(), text)

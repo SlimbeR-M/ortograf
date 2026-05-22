@@ -74,6 +74,11 @@ def _get_verbos_pasado():
     from app.services.grammar import VERBOS_PASADO_1RA
     return VERBOS_PASADO_1RA
 
+
+def _get_geonombres():
+    from app.services.postprocess import _GEONOMBRES
+    return _GEONOMBRES
+
 FUTUROS_PROTEGIDOS = {
     "dara", "hara", "tendra", "podra", "querra", "vendra",
     "saldra", "pondra", "valdra", "cabra", "habra", "sabra",
@@ -182,6 +187,17 @@ def correct_spelling(text: str) -> str:
                     frag_lower[:-1] == repl_lower[:-1].translate(
                         str.maketrans('áéíóú', 'aeiou'))):
                 continue
+
+        # Bloquear correcciones estructurales (no solo tilde) sobre nombres
+        # geográficos reconocidos por _GEONOMBRES. LT puede aplicar reglas de
+        # concordancia o conjugación a estas palabras (ej: AGREEMENT_DET_ADJ:
+        # "el himalaya" → "el himalayo"; SUBJUNTIVO_INCORRECTO: "andes" → "andas").
+        # Se permiten cambios de solo tilde porque no alteran la estructura.
+        if m.replacements:
+            _geos = _get_geonombres()
+            if any(w in _geos for w in frag_lower.split()):
+                if frag_lower.translate(_ACCENT_MAP) != m.replacements[0].lower().translate(_ACCENT_MAP):
+                    continue
 
         # Proteger pronombres clíticos
         if frag_lower in CLITICOS_PROTEGIDOS:
