@@ -135,10 +135,12 @@ def capitalizar_entidades(text: str) -> str:
                 # a auxiliares como "habían" cuando siguen a un nombre compuesto
                 es_candidato = True
             elif sig.pos_ == "VERB" and sig.dep_ in _DEP_APELLIDO_VERBAL and not sig.is_stop:
-                # spaCy etiqueta el apellido como VERB (dep=flat o dep=amod)
-                # Solo si el token siguiente NO introduce argumento verbal
                 sig_next = doc[i + 2] if i + 2 < len(doc) else None
-                if sig_next is None or sig_next.pos_ not in _POS_ARG_VERBAL:
+                # Si el head del sig es PER, es apellido sin ambigüedad: amod/flat
+                # de un nombre reconocido como PER (ej: "vega" amod de "doctora" PER).
+                # En ese caso no es necesario verificar sig_next.
+                if (sig.head.ent_type_ == "PER" or
+                        sig_next is None or sig_next.pos_ not in _POS_ARG_VERBAL):
                     es_candidato = True
             elif sig.pos_ == "VERB" and sig.dep_ == "ROOT" and not sig.is_stop:
                 # spaCy asigna dep_=ROOT al apellido cuando el verbo real (corregido

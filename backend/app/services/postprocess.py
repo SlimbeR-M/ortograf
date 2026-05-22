@@ -54,7 +54,14 @@ def _coma_en_enumeracion_nombres_propios(text: str) -> str:
     # Cubre: "el Caribe" (art+Cap), "la salud" (art+lower), "el océano Índico"
     # (art+lower+Cap), "el medio ambiente" (art+lower+lower).
     _ART_WORD = r'[a-záéíóúüñA-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{2,}'
-    _ART_ELEM = r'(?:el|la|los|las) ' + _ART_WORD + r'(?: ' + _ART_WORD + r')?'
+    # RAE: preposiciones y contracciones forman sintagma indivisible con su complemento
+    # y nunca son el último componente de un elemento de enumeración.
+    _PREPS = (
+        r'(?:del|de|en|con|por|para|sin|sobre|entre|ante|bajo|tras'
+        r'|hacia|hasta|desde|según|durante|mediante|contra|al)'
+    )
+    _ART_WORD2 = r'(?!' + _PREPS + r'\b)' + _ART_WORD
+    _ART_ELEM = r'(?:el|la|los|las) ' + _ART_WORD + r'(?: ' + _ART_WORD2 + r')?'
     ELEM = r'(?:' + _HOLD + r'|' + _ART_ELEM + r'|' + _WORD + r')'
 
     patron = re.compile(
@@ -95,8 +102,18 @@ def _coma_en_enumeracion_sustantivos(text: str) -> str:
         r'(?<!aron)(?<!eron)(?<!ieron)'
         r'(?<!uye)'
     )
-    # GN: 1-2 palabras de contenido consecutivas
-    _GN = r'(?:' + _WORD + r'(?:\s+' + _WORD + r')?)'
+    # RAE: preposiciones y conjunciones no inician elementos de enumeración.
+    # Las palabras funcionales de ≥5 letras que coinciden con _WORD se excluyen
+    # del inicio de GN: si el motor las consume, avanza la posición y nunca
+    # prueba la palabra de contenido siguiente como primer elemento real.
+    _FUNC_START = (
+        r'(?:sobre|entre|desde|hasta|según|hacia|durante|mediante|contra'
+        r'|porque|aunque|cuando|donde|mientras|también|tampoco'
+        r'|estos|estas|aquellos|aquellas)'
+    )
+    _WORD_CONTENT = r'(?!' + _FUNC_START + r'\b)' + _WORD
+    # GN: 1-2 palabras de contenido; la primera no puede ser palabra funcional
+    _GN = r'(?:' + _WORD_CONTENT + r'(?:\s+' + _WORD + r')?)'
 
     patron = re.compile(
         r'(' + _GN + r') (' + _GN + r')'
