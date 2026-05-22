@@ -1690,6 +1690,13 @@ def correct_grammar(text: str) -> str:
                     resultado.append(esdruj_form + _suf_e)
                 else:
                     resultado.append(palabra)
+            elif (nucleo in AMBIGUOS and
+                  siguiente == "" and
+                  anterior in {"y", "o", "ni", "e"} and
+                  anterior_a_que not in VERBOS_PASADO_1RA):
+                # Último elemento de enumeración nominal tras conjunción coordinante:
+                # "investigación, innovación y desarrollo" → sustantivo, no verbo.
+                resultado.append(palabra)
             else:
                 corregido = VERBOS_PASADO_1RA[nucleo]
                 if palabra[0].isupper():

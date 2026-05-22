@@ -276,7 +276,8 @@ def capitalizar_entidades(text: str) -> str:
             j = k + 1
             while (j < len(doc) and
                    (doc[j].pos_ == "PROPN" or
-                    (doc[j].pos_ == "NOUN" and doc[j].dep_ == "appos" and not doc[j].is_stop)) and
+                    (doc[j].pos_ == "NOUN" and doc[j].dep_ == "appos" and not doc[j].is_stop) or
+                    (doc[j].pos_ == "NOUN" and doc[j].dep_ == "flat" and not doc[j].is_stop and doc[j].head.pos_ == "PROPN")) and
                    doc[j].ent_type_ == "" and
                    doc[j].text not in TITULOS_MINUSCULA):
                 chain.append(j)
