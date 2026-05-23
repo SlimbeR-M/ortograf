@@ -1,6 +1,9 @@
 import re
 import json
 import os
+import unicodedata
+from functools import lru_cache
+from .spelling import tool as _lt
 
 _DATOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 try:
@@ -8,6 +11,35 @@ try:
         _TOPONIMOS = sorted(json.load(_f)['paises_compuestos'], key=len, reverse=True)
 except (OSError, KeyError, json.JSONDecodeError):
     _TOPONIMOS = []
+
+
+@lru_cache(maxsize=256)
+def _is_foreign_word(word: str) -> bool:
+    """True if LT's MORFOLOGIK doesn't recognize this as a known Spanish proper noun.
+
+    Known Spanish proper nouns (Europa, África, Berlín) have their
+    capitalized/accented form as a top MORFOLOGIK suggestion, so
+    strip_accents(suggestion) == strip_accents(word) → False (known).
+    Foreign words (warriors, golden, state) get phonetically similar but
+    semantically different Spanish words → True (foreign).
+    """
+    wl = word.lower()
+    for m in _lt.check(wl):
+        if not m.rule_id.startswith('MORFOLOGIK'):
+            continue
+        for sug in m.replacements[:3]:
+            sug_base = ''.join(
+                c for c in unicodedata.normalize('NFD', sug.lower())
+                if unicodedata.category(c) != 'Mn'
+            )
+            word_base = ''.join(
+                c for c in unicodedata.normalize('NFD', wl)
+                if unicodedata.category(c) != 'Mn'
+            )
+            if sug_base == word_base:
+                return False
+        return True
+    return False
 
 
 def finalize_text(text: str) -> str:
@@ -314,6 +346,12 @@ def _finalizar_parrafo(text: str) -> str:
     _cpn_n = [0]
 
     def _cpn_sub(m):
+        run_words = m.group(0).split()
+        # Solo proteger si al menos una palabra es extranjera (no es un nombre
+        # propio español reconocido por LT). Las listas de topónimos españoles
+        # (Europa Asia África) no contienen palabras extranjeras → no se protegen.
+        if not any(_is_foreign_word(w) for w in run_words):
+            return m.group(0)
         key = f'__CPN{_cpn_n[0]}__'
         cpn_slots[key] = m.group(0)
         _cpn_n[0] += 1

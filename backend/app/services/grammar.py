@@ -1558,6 +1558,7 @@ def correct_grammar(text: str) -> str:
             "recurso", "riesgo", "resumen", "turno", "paso",
             "anuncio", "acuerdo", "intento", "aumento", "decreto",
             "impacto", "resultado", "efecto",
+            "negocio",  # negociar (pasado) vs sustantivo "negocio"
             "indico",  # indicar (pasado) vs adjetivo geográfico "índico"
             "critico",  # criticar (pasado) vs adjetivo/sustantivo "crítico"
             "diagnostico",  # diagnosticar (pasado) vs sustantivo "diagnóstico"
