@@ -300,6 +300,27 @@ def _finalizar_parrafo(text: str) -> str:
             slots[key] = top
             text = pat.sub(key, text)
 
+    # Proteger secuencias de 3+ palabras capitalizadas consecutivas (sin coma entre
+    # ellas) como nombres propios compuestos que no deben fragmentarse.
+    # RAE: los nombres propios compuestos son unidades indivisibles.
+    # Ej: "Golden State Warriors", "Los Angeles Lakers".
+    # Las topónimos ya protegidos con __TOP__ no interfieren (no coinciden con _WORD_CAPS).
+    # Solo 3+ palabras: con 2 palabras la ambigüedad es mayor (podría ser lista de
+    # dos nombres propios como "Europa Asia") y los casos de 2 palabras están cubiertos
+    # mayoritariamente por los placeholders de topónimos del JSON.
+    _WORD_CAPS_DEF = r'[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,}'
+    _cpn_re = re.compile(_WORD_CAPS_DEF + r'(?:\s+' + _WORD_CAPS_DEF + r'){2,}')
+    cpn_slots: dict[str, str] = {}
+    _cpn_n = [0]
+
+    def _cpn_sub(m):
+        key = f'__CPN{_cpn_n[0]}__'
+        cpn_slots[key] = m.group(0)
+        _cpn_n[0] += 1
+        return key
+
+    text = _cpn_re.sub(_cpn_sub, text)
+
     text = _coma_en_enumeracion_nombres_propios(text)
 
     # RAE: en "Nombre Apellido y Nombre Apellido" no se inserta coma entre
@@ -312,6 +333,10 @@ def _finalizar_parrafo(text: str) -> str:
     # Restaurar topónimos a sus formas canónicas
     for key, canonical in slots.items():
         text = text.replace(key, canonical)
+
+    # Restaurar nombres propios compuestos protegidos
+    for key, compound in cpn_slots.items():
+        text = text.replace(key, compound)
 
     # RAE §91.2.1: comas en enumeraciones de sustantivos comunes sin artículo
     # (ej: "cambio climático energía renovable y desarrollo tecnológico").

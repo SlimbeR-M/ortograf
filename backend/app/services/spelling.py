@@ -350,15 +350,26 @@ def correct_spelling(text: str) -> str:
     # RAE: los nombres propios siguen las mismas reglas de acentuación.
     # -----------------------------------------------------------------------
     _cap_lower: dict[str, str] = {}
-    for _tok in result.split():
+    _cap_tokens = result.split()
+    for _i, _tok in enumerate(_cap_tokens):
         _core = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]', '', _tok)
         if _core and _core[0].isupper() and not re.search(r'[áéíóúü]', _core):
             # Saltar palabras con mayúscula interna (CamelCase): son nombres propios
             # extranjeros (LeBron, McDonald, iPhone) que no deben acentuarse como
-            # palabras españolas. Las palabras MORFOLOGIK ya fueron bloqueadas en
-            # el pase principal; esta guarda protege el pase secundario.
+            # palabras españolas.
             if any(c.isupper() for c in _core[1:]):
                 continue
+            # Saltar palabras precedidas por un token capitalizado corto (≤3 chars):
+            # estos tokens son artículos o preposiciones de nombres propios compuestos
+            # (Los, Las, El, La, New, San, Von, De…) que indican que la palabra
+            # siguiente es parte de un nombre compuesto extranjero o geográfico,
+            # no una palabra española que requiera tilde. Ej: "Los Angeles" →
+            # "Angeles" no debe convertirse en "Ángeles"; "El Paso" → "Paso" intacto.
+            # Esto NO afecta nombres como "Jose Maria" porque "Jose" tiene 4 chars.
+            if _i > 0:
+                _prev_core = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]', '', _cap_tokens[_i - 1])
+                if _prev_core and _prev_core[0].isupper() and len(_prev_core) <= 3:
+                    continue
             _lw = _core.lower()
             if _lw not in _cap_lower:
                 _cap_lower[_lw] = _core
