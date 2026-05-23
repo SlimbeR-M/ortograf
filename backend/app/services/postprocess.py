@@ -112,8 +112,12 @@ def _coma_en_enumeracion_sustantivos(text: str) -> str:
         r'|estos|estas|aquellos|aquellas)'
     )
     _WORD_CONTENT = r'(?!' + _FUNC_START + r'\b)' + _WORD
-    # GN: 1-2 palabras de contenido; la primera no puede ser palabra funcional
-    _GN = r'(?:' + _WORD_CONTENT + r'(?:\s+' + _WORD + r')?)'
+    # GN: 1-2 palabras de contenido; ninguna puede ser palabra funcional.
+    # La segunda palabra también usa _WORD_CONTENT: si usara _WORD (sin
+    # restricción), "temas sobre" formaría un GN válido, _sub lo bloquearía,
+    # pero el engine ya habría consumido "temas" y no volvería a probar
+    # "privacidad" como GN1 → la coma no se insertaría.
+    _GN = r'(?:' + _WORD_CONTENT + r'(?:\s+' + _WORD_CONTENT + r')?)'
 
     patron = re.compile(
         r'(' + _GN + r') (' + _GN + r')'
