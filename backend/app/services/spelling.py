@@ -330,6 +330,16 @@ def correct_spelling(text: str) -> str:
                 SequenceMatcher(None, frag_lower[:-1], m.replacements[0].lower()[:-1]).ratio() > 0.85):
                 continue
 
+        # Bloquear MORFOLOGIK sobre palabras que empiezan con mayúscula en el input.
+        # RAE: los nombres propios extranjeros se escriben en su idioma original.
+        # Una palabra con primera letra mayúscula es un nombre propio que MORFOLOGIK
+        # trata erróneamente como error ortográfico español (ej: "Curry"→"Curri",
+        # "LeBron"→"Lebrón", "Warriors"→"Barrios").
+        # Las tildes de nombres propios españoles se corrigen en Fase 2b (pase
+        # secundario que solo aplica cambios acento-a-acento sin alterar la palabra).
+        if m.rule_id.startswith("MORFOLOGIK") and fragmento[0].isupper():
+            continue
+
         matches_seguros.append(m)
 
     result = language_tool_python.utils.correct(protected, matches_seguros)
@@ -343,6 +353,12 @@ def correct_spelling(text: str) -> str:
     for _tok in result.split():
         _core = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]', '', _tok)
         if _core and _core[0].isupper() and not re.search(r'[áéíóúü]', _core):
+            # Saltar palabras con mayúscula interna (CamelCase): son nombres propios
+            # extranjeros (LeBron, McDonald, iPhone) que no deben acentuarse como
+            # palabras españolas. Las palabras MORFOLOGIK ya fueron bloqueadas en
+            # el pase principal; esta guarda protege el pase secundario.
+            if any(c.isupper() for c in _core[1:]):
+                continue
             _lw = _core.lower()
             if _lw not in _cap_lower:
                 _cap_lower[_lw] = _core
