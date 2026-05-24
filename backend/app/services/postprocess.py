@@ -93,8 +93,11 @@ def _coma_en_enumeracion_nombres_propios(text: str) -> str:
         r'|hacia|hasta|desde|según|durante|mediante|contra|al)'
     )
     _ART_WORD2 = r'(?!' + _PREPS + r'\b)' + _ART_WORD
-    _ART_ELEM = r'(?:el|la|los|las) ' + _ART_WORD + r'(?: ' + _ART_WORD2 + r')?'
-    ELEM = r'(?:' + _HOLD + r'|' + _ART_ELEM + r'|' + _WORD + r')'
+    # \b evita capturar "los" embebido en palabras (ej: "Pueblos" contiene "los")
+    _ART_ELEM = r'\b(?:el|la|los|las) ' + _ART_WORD + r'(?: ' + _ART_WORD2 + r')?'
+    # Cubre "el Golfo de México", "el Mar del Norte": art + palabra + de/del + palabra
+    _ART_PREP_ELEM = r'\b(?:el|la|los|las) ' + _ART_WORD + r' de(?:l)? ' + _ART_WORD
+    ELEM = r'(?:' + _HOLD + r'|' + _ART_PREP_ELEM + r'|' + _ART_ELEM + r'|' + _WORD + r')'
 
     patron = re.compile(
         r'(' + ELEM + r') (?!' + _GENT + r'\b)(' + ELEM + r')'
@@ -376,6 +379,12 @@ def _finalizar_parrafo(text: str) -> str:
         return key
 
     text = _cpn_re_2.sub(_cpn_sub_2, text)
+
+    # Pre-capitalizar geonombres antes de insertar comas: asegura que nombres
+    # geográficos en minúscula (ej: "pacífico") sean ELEM válidos (_WORD requiere
+    # mayúscula inicial). Se vuelven a aplicar al final (son idempotentes).
+    text = _capitalizar_geonombres_en_contexto(text)
+    text = _capitalizar_nombres_geograficos_con_articulo(text)
 
     text = _coma_en_enumeracion_nombres_propios(text)
 

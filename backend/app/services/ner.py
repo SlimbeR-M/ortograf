@@ -244,6 +244,10 @@ def capitalizar_entidades(text: str) -> str:
                 if token.idx < len(resultado) and resultado[token.idx].islower():
                     resultado[token.idx] = resultado[token.idx].upper()
                 _titulo_con_nombre[token.head.idx] = token.idx
+            elif token.pos_ in {"PROPN", "NOUN"}:
+                # Nombre que ya termina en é/ó (ej: "José") — ya capitalizado por LT.
+                # Registrar igual para que Step 2b pueda encontrar el apellido que sigue.
+                _titulo_con_nombre[token.head.idx] = token.idx
     for token in doc:
         if (token.ent_type_ == "" and
                 not token.is_stop and
@@ -251,6 +255,25 @@ def capitalizar_entidades(text: str) -> str:
                 token.head.ent_type_ == "" and
                 token.head.idx in _titulo_con_nombre and
                 token.idx > _titulo_con_nombre[token.head.idx]):
+            _end = token.idx + len(token.text)
+            _orig = ''.join(resultado[token.idx:_end]) if _end <= len(resultado) else ''
+            if not any(_orig.endswith(t) for t in ('ó', 'é', 'ó.', 'é.')):
+                if token.idx < len(resultado) and resultado[token.idx].islower():
+                    resultado[token.idx] = resultado[token.idx].upper()
+
+    # E6 Paso 2b: apellido con dep=flat cuyo head es el nombre capturado en Paso 1.
+    # Cubre el caso "doctor jose vega" donde spaCy da "vega" dep=flat head="jose"
+    # y "jose" fue capitalizado en Paso 1 como appos del título "doctor".
+    # Contraste con Paso 2 (dep=amod del TITULO): aquí el head es el NOMBRE, no el título.
+    # Guarda: head.pos_==PROPN (confirma que es nombre propio) y no pretérito (ó/é).
+    _titulo_nombres_idx = set(_titulo_con_nombre.values())
+    for token in doc:
+        if (token.ent_type_ == "" and
+                not token.is_stop and
+                token.dep_ == "flat" and
+                token.head.ent_type_ == "" and
+                token.head.pos_ == "PROPN" and
+                token.head.idx in _titulo_nombres_idx):
             _end = token.idx + len(token.text)
             _orig = ''.join(resultado[token.idx:_end]) if _end <= len(resultado) else ''
             if not any(_orig.endswith(t) for t in ('ó', 'é', 'ó.', 'é.')):

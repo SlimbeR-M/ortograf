@@ -265,6 +265,15 @@ def correct_spelling(text: str) -> str:
                             for o, r in changed
                         ):
                             continue
+                        # Bloquear si alguna palabra cambiada tiene raíz diferente
+                        # (no solo tilde): ej "maria García"→"Marta García" donde
+                        # "maria"→"marta" cambia la raíz. Correcciones de solo tilde
+                        # ("maria"→"maría") se permiten porque la raíz es igual.
+                        if changed and not all(
+                            o.translate(_ACCENT_MAP) == r.translate(_ACCENT_MAP)
+                            for o, r in changed
+                        ):
+                            continue
                 else:
                     sim = SequenceMatcher(None, frag_lower, m.replacements[0].lower()).ratio()
                     if sim < 0.7:
@@ -339,6 +348,21 @@ def correct_spelling(text: str) -> str:
         # secundario que solo aplica cambios acento-a-acento sin alterar la palabra).
         if m.rule_id.startswith("MORFOLOGIK") and fragmento[0].isupper():
             continue
+
+        # Bloquear MORFOLOGIK cuando el reemplazo es una palabra DISTINTA capitalizada
+        # pero la entrada está en minúscula. MORFOLOGIK no conoce términos médicos o
+        # extranjeros en minúscula (ej: "zika") y propone el nombre propio español más
+        # cercano (ej: "Mika"). Solo se bloquea cuando la raíz cambia: si solo se añade
+        # tilde (ej: "jose"→"José", "lider"→"Líder"), la corrección es legítima y se
+        # permite. Discriminación: comparar ambas formas sin tildes ni mayúsculas.
+        if (m.rule_id.startswith("MORFOLOGIK") and
+                m.replacements and
+                m.replacements[0][0].isupper() and
+                not fragmento[0].isupper()):
+            _repl_base = m.replacements[0].lower().translate(_ACCENT_MAP)
+            _frag_base = frag_lower.translate(_ACCENT_MAP)
+            if _repl_base != _frag_base:
+                continue
 
         matches_seguros.append(m)
 
