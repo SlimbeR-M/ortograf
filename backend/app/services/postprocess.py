@@ -98,7 +98,7 @@ def _coma_en_enumeracion_nombres_propios(text: str) -> str:
 
     patron = re.compile(
         r'(' + ELEM + r') (?!' + _GENT + r'\b)(' + ELEM + r')'
-        r'(?=(?:(?:, | )' + ELEM + r')* (?:y|o|ni) ' + ELEM + r')'
+        r'(?=(?:(?:, | )' + ELEM + r')* (?:y|e|u|o|ni) ' + ELEM + r')'
     )
 
     anterior = None
@@ -384,18 +384,21 @@ def _finalizar_parrafo(text: str) -> str:
     # Con los placeholders aún activos, los topónimos compuestos no se ven afectados.
     text = _REVERTIR_COMA_NOMBRES.sub(r'\1 \2 \3 \4 \5', text)
 
-    # Restaurar topónimos a sus formas canónicas
-    for key, canonical in slots.items():
-        text = text.replace(key, canonical)
-
-    # Restaurar nombres propios compuestos protegidos
+    # Restaurar nombres propios compuestos (CPN) ANTES que los topónimos.
+    # El segundo REVERTIR corre aquí con los __TOP__ aún activos: así los compuestos
+    # topónimos (Nueva Zelanda, América Latina) siguen siendo placeholders opacos y
+    # no disparan el revert. Solo los CPN restaurados (Chicago Bulls, Miami Heat)
+    # pueden coincidir con el patrón y revertirse correctamente.
     for key, compound in cpn_slots.items():
         text = text.replace(key, compound)
 
-    # Segunda pasada de REVERTIR: tras restaurar CPNs, pares como
-    # "Boston, Celtics y Chicago Bulls" (donde __CPN__ ocultaba "Chicago Bulls")
-    # pueden revertirse ahora que la forma real está visible.
+    # Segunda pasada de REVERTIR: "Boston, Celtics y Chicago Bulls" → "Boston Celtics y Chicago Bulls".
+    # "Japón, Australia y __TOP49__" no se toca: __TOP49__ no coincide con _WORD_CAP.
     text = _REVERTIR_COMA_NOMBRES.sub(r'\1 \2 \3 \4 \5', text)
+
+    # Restaurar topónimos a sus formas canónicas (después del segundo REVERTIR)
+    for key, canonical in slots.items():
+        text = text.replace(key, canonical)
 
     # RAE §91.2.1: comas en enumeraciones de sustantivos comunes sin artículo
     # (ej: "cambio climático energía renovable y desarrollo tecnológico").
