@@ -340,7 +340,9 @@ def _finalizar_parrafo(text: str) -> str:
     # Solo 3+ palabras: con 2 palabras la ambigüedad es mayor (podría ser lista de
     # dos nombres propios como "Europa Asia") y los casos de 2 palabras están cubiertos
     # mayoritariamente por los placeholders de topónimos del JSON.
-    _WORD_CAPS_DEF = r'[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,}'
+    # {2,}: palabras de 3+ chars (Foo, Red, Hot) también quedan visibles para CPN.
+    # La guarda _is_foreign_word evita que pares españoles (Europa Asia) se protejan.
+    _WORD_CAPS_DEF = r'[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{2,}'
     _cpn_re = re.compile(_WORD_CAPS_DEF + r'(?:\s+' + _WORD_CAPS_DEF + r'){2,}')
     cpn_slots: dict[str, str] = {}
     _cpn_n = [0]
