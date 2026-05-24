@@ -1598,6 +1598,11 @@ def correct_grammar(text: str) -> str:
         siguiente = _limpiar_nucleo(palabras[j+1]) if j + 1 < len(palabras) else ""
         anterior_es_futuro = _es_futuro(anterior_orig) if anterior_orig else False
 
+        # Cuando la palabra termina en puntuación de fin de oración (.?!), el siguiente
+        # token pertenece a otra oración y no debe usarse como contexto gramatical
+        # (RAE: el sustantivo "estudio" en "regiones de estudio. El foro" no es verbo).
+        siguiente_adj = "" if re.search(r'[.?!]+$', palabra) else siguiente
+
         # Cláusula subjuntiva detectada por lookback → nunca tildar
         if _es_subjuntivo_clausula(palabras, j):
             resultado.append(palabra)
@@ -1670,16 +1675,16 @@ def correct_grammar(text: str) -> str:
                 # RAE: adjetivo geográfico (ej: "océano índico") → preservar sin tilde verbal;
                 # postprocess lo capitalizará como nombre propio geográfico.
                 resultado.append(palabra)
-            elif nucleo in AMBIGUOS and siguiente not in {
+            elif nucleo in AMBIGUOS and siguiente_adj not in {
                 "la", "el", "los", "las", "un", "una", "unas", "unos"
-            } and (siguiente != "" or anterior in _AMBIGUOS_BLOQ) and (
+            } and (siguiente_adj != "" or anterior in _AMBIGUOS_BLOQ) and (
                 anterior in _AMBIGUOS_BLOQ or
                 (anterior_a_que in {"el", "al", "un", "la", "una", "mi", "tu",
                                     "su", "del", "este", "ese", "aquel",
                                     "nuestro", "cada", "de", "por", "para", "con"}
                  and (anterior in _AMBIGUOS_BLOQ or anterior in _MODS_PREVIOS)) or
-                (len(siguiente) >= 4 and
-                 any(siguiente.endswith(s) for s in _SUFIJOS_ADJ))
+                (len(siguiente_adj) >= 4 and
+                 any(siguiente_adj.endswith(s) for s in _SUFIJOS_ADJ))
             ):
                 # Sustantivo/adjetivo: aplicar forma esdrújula si corresponde
                 if nucleo in _FORMAS_ESDRUJULO:
@@ -1699,10 +1704,13 @@ def correct_grammar(text: str) -> str:
                 # "investigación, innovación y desarrollo" → sustantivo, no verbo.
                 resultado.append(palabra)
             else:
+                # Preservar puntuación final (ej: "estudió." cuando es verbo ante punto)
+                _m_suf_verbo = re.search(r'["\'\?!,\.;:\)\]]+$', palabra)
+                _suf_verbo = _m_suf_verbo.group(0) if _m_suf_verbo else ""
                 corregido = VERBOS_PASADO_1RA[nucleo]
                 if palabra[0].isupper():
                     corregido = corregido[0].upper() + corregido[1:]
-                resultado.append(corregido)
+                resultado.append(corregido + _suf_verbo)
         else:
             resultado.append(palabra)
     text = " ".join(resultado)

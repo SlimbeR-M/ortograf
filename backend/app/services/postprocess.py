@@ -77,7 +77,7 @@ def _coma_en_enumeracion_nombres_propios(text: str) -> str:
     antes de llamar; la protección y restauración las gestiona el llamador.
     """
     _WORD = r'[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,}'
-    _HOLD = r'__TOP\d+__'
+    _HOLD = r'(?:__TOP\d+__|__CPN\d+__)'
     _GENT = (
         r'(?:Latina|Latino|Central|Oriental|Occidental'
         r'|Septentrional|Meridional|Austral|Boreal)'
@@ -359,6 +359,22 @@ def _finalizar_parrafo(text: str) -> str:
 
     text = _cpn_re.sub(_cpn_sub, text)
 
+    # Proteger pares de 2 palabras capitalizadas donde al menos una es extranjera
+    # (ej: "Miami Heat", "Chicago Bulls"). Los pares completamente españoles
+    # (Europa Asia, Carlos Torres) no contienen palabras extranjeras → no se protegen.
+    _cpn_re_2 = re.compile(_WORD_CAPS_DEF + r'\s+' + _WORD_CAPS_DEF)
+
+    def _cpn_sub_2(m):
+        run_words = m.group(0).split()
+        if not any(_is_foreign_word(w) for w in run_words):
+            return m.group(0)
+        key = f'__CPN{_cpn_n[0]}__'
+        cpn_slots[key] = m.group(0)
+        _cpn_n[0] += 1
+        return key
+
+    text = _cpn_re_2.sub(_cpn_sub_2, text)
+
     text = _coma_en_enumeracion_nombres_propios(text)
 
     # RAE: en "Nombre Apellido y Nombre Apellido" no se inserta coma entre
@@ -375,6 +391,11 @@ def _finalizar_parrafo(text: str) -> str:
     # Restaurar nombres propios compuestos protegidos
     for key, compound in cpn_slots.items():
         text = text.replace(key, compound)
+
+    # Segunda pasada de REVERTIR: tras restaurar CPNs, pares como
+    # "Boston, Celtics y Chicago Bulls" (donde __CPN__ ocultaba "Chicago Bulls")
+    # pueden revertirse ahora que la forma real está visible.
+    text = _REVERTIR_COMA_NOMBRES.sub(r'\1 \2 \3 \4 \5', text)
 
     # RAE §91.2.1: comas en enumeraciones de sustantivos comunes sin artículo
     # (ej: "cambio climático energía renovable y desarrollo tecnológico").
