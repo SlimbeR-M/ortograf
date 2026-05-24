@@ -349,20 +349,26 @@ def correct_spelling(text: str) -> str:
         if m.rule_id.startswith("MORFOLOGIK") and fragmento[0].isupper():
             continue
 
-        # Bloquear MORFOLOGIK cuando el reemplazo es una palabra DISTINTA capitalizada
-        # pero la entrada está en minúscula. MORFOLOGIK no conoce términos médicos o
-        # extranjeros en minúscula (ej: "zika") y propone el nombre propio español más
-        # cercano (ej: "Mika"). Solo se bloquea cuando la raíz cambia: si solo se añade
-        # tilde (ej: "jose"→"José", "lider"→"Líder"), la corrección es legítima y se
-        # permite. Discriminación: comparar ambas formas sin tildes ni mayúsculas.
+        # Bloquear MORFOLOGIK cuando el reemplazo tiene raíz diferente a la palabra
+        # original. MORFOLOGIK no conoce términos médicos/técnicos en minúscula
+        # (ej: "zika"→"Mika", "discalculia"→"descálcela") y propone la palabra más
+        # cercana de su diccionario. Se permite si solo cambian tildes (misma raíz sin
+        # acento). Para sugerencias en minúscula con raíz diferente, solo se bloquea
+        # cuando la similitud es baja (<0.85): así se permiten correcciones legítimas
+        # de errores ortográficos con raíz casi idéntica (ej: "exepcion"→"excepción",
+        # ratio≈0.94), pero se bloquean sustituciones de términos desconocidos
+        # (ej: "discalculia"→"descálcela", ratio≈0.76).
         if (m.rule_id.startswith("MORFOLOGIK") and
                 m.replacements and
-                m.replacements[0][0].isupper() and
                 not fragmento[0].isupper()):
             _repl_base = m.replacements[0].lower().translate(_ACCENT_MAP)
             _frag_base = frag_lower.translate(_ACCENT_MAP)
             if _repl_base != _frag_base:
-                continue
+                if m.replacements[0][0].isupper():
+                    continue  # Sugerencia capitalizada → nombre propio extraño sustituido
+                _sim = SequenceMatcher(None, _frag_base, _repl_base).ratio()
+                if _sim < 0.85:
+                    continue  # Raíz diferente + baja similitud → término especializado
 
         matches_seguros.append(m)
 

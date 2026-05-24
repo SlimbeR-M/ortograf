@@ -11,6 +11,13 @@ _ACCENT_STRIP = str.maketrans('áéíóúüÁÉÍÓÚÜ', 'aeiouuAEIOUU')
 
 _nlp = None
 
+# Sufijos que identifican sustantivos abstractos en español: palabras con estos
+# sufijos NUNCA son nombres propios de persona, por lo que no deben capitalizarse
+# aunque spaCy las clasifique erróneamente como entidad PER.
+_SUFIJOS_SUSTANTIVO_ABSTRACTO = (
+    'cion', 'idad', 'ismo', 'miento',
+)
+
 NOMBRES_AMBIGUOS = {
     "rosa", "victoria", "dulce", "marcos", "leon",
     "paz", "fe", "mercedes", "luz", "aurora", "gloria",
@@ -68,6 +75,10 @@ def capitalizar_entidades(text: str) -> str:
                 pass  # LT no capitalizó este token → sustantivo común, no nombre propio
             elif token.pos_ in {"ADP", "CCONJ", "SCONJ", "DET"} and i > 0:
                 pass  # RAE: preposiciones, conjunciones y artículos nunca llevan mayúscula salvo inicio
+            elif (token.ent_type_ == "PER" and
+                  token.idx < len(resultado) and resultado[token.idx].islower() and
+                  any(tok_lower.endswith(s) for s in _SUFIJOS_SUSTANTIVO_ABSTRACTO)):
+                pass  # sustantivo abstracto (ej: "desercion") clasificado erróneamente como PER
             elif token.pos_ == "VERB" and i > 0:
                 # En entidades PER un VERB puede ser un apellido mal etiquetado (ej: "vega" en "luis vega").
                 # Solo capitalizar si la forma original NO termina en pretérito (ó/é); esas sí son verbos.
@@ -129,10 +140,13 @@ def capitalizar_entidades(text: str) -> str:
 
             es_candidato = False
             if (sig.pos_ in _POS_APELLIDO and sig.pos_ not in _POS_NO_APELLIDO and
-                    sig.dep_ not in {"aux", "auxpass", "cop"} and not sig.is_stop):
+                    sig.dep_ not in {"aux", "auxpass", "cop"} and not sig.is_stop and
+                    not (sig.pos_ == "ADJ" and sig.dep_ == "amod")):
                 # Caso clásico: PROPN/NOUN/ADJ sin tilde verbal
                 # dep_=aux/auxpass/cop excluidos: spaCy a veces asigna pos_=PROPN
-                # a auxiliares como "habían" cuando siguen a un nombre compuesto
+                # a auxiliares como "habían" cuando siguen a un nombre compuesto.
+                # ADJ dep_=amod excluido: es modificador adjetival del sustantivo
+                # anterior (ej: "deserción escolar"), no apellido.
                 es_candidato = True
             elif sig.pos_ == "VERB" and sig.dep_ in _DEP_APELLIDO_VERBAL and not sig.is_stop:
                 sig_next = doc[i + 2] if i + 2 < len(doc) else None

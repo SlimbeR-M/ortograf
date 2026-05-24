@@ -159,10 +159,27 @@ def _coma_en_enumeracion_sustantivos(text: str) -> str:
         r'(?=(?:(?:, | )' + _GN + r')* (?:y|o|ni) ' + _GN + r')'
     )
 
+    # RAE: en "N adj1 y adj2", los adjetivos modifican al sustantivo y no forman
+    # una enumeración independiente → no se inserta coma antes del primer adjetivo.
+    # Discriminación: si GN2 termina en sufijo adjetival y GN1 no → patrón N+adj.
+    _ADJ_SUFIJOS = (
+        'al', 'ales', 'ar', 'ares',
+        'ico', 'ica', 'icos', 'icas',
+        'oso', 'osa', 'osos', 'osas',
+        'ivo', 'iva', 'ivos', 'ivas',
+        'ble', 'bles',
+    )
+
     def _sub(m):
         for w in (m.group(1) + ' ' + m.group(2)).split():
             if w.lower() in _FUNC:
                 return m.group(0)
+        # Detectar patrón sustantivo + adjetivos modificadores ("salud física y mental")
+        gn2_ult = m.group(2).split()[-1].lower()
+        gn1_ult = m.group(1).split()[-1].lower()
+        if (any(gn2_ult.endswith(s) for s in _ADJ_SUFIJOS) and
+                not any(gn1_ult.endswith(s) for s in _ADJ_SUFIJOS)):
+            return m.group(0)
         return m.group(1) + ', ' + m.group(2)
 
     return patron.sub(_sub, text)
@@ -213,6 +230,8 @@ _GEONOMBRES = {
     "caucaso": "Cáucaso",
     "níger": "Níger",
     "niger": "Níger",
+    # Estados mexicanos que LT no capitaliza por ser palabras comunes en español
+    "guerrero": "Guerrero",
 }
 
 
