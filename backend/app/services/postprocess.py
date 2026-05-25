@@ -453,6 +453,11 @@ def _finalizar_parrafo(text: str) -> str:
     text = re.sub(r'!{2,}', '!', text)
     text = re.sub(r'([.?!])\s*([.?!])', r'\1', text)
     text = re.sub(r'([.?!])(["\'])(\s|$)', r'\1\3', text)
+    # RAE: signo fuerte (;.!?) absorbe la coma adyacente — nunca van juntos.
+    text = re.sub(r'([;.!?]),', r'\1', text)
+    text = re.sub(r',([;!?])', r'\1', text)
+    text = re.sub(r';;', ';', text)
+    text = re.sub(r',,', ',', text)
 
     # Restaurar puntos suspensivos
     text = text.replace('__ELLIPSIS__', '...')

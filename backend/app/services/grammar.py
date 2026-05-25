@@ -1234,7 +1234,11 @@ def _es_subjuntivo_clausula(palabras: list, j: int) -> bool:
         w = re.sub(r'^["\'\¿¡\(\[]+|["\'\?!,\.;:\)\]]+$', '', palabras[k]).lower()
         if w in _CORTE_CLAUSULA:
             break
-        if w == "que" and k > 0:
+        if w == "que":
+            # RAE: "que" al inicio absoluto de oración es siempre conjunción
+            # subordinante (no puede ser relativo sin antecedente previo).
+            if k == 0:
+                return True
             ante_que = re.sub(r'^["\'\¿¡\(\[]+|["\'\?!,\.;:\)\]]+$', '', palabras[k - 1]).lower()
             # Verbo de anuncio → futuro reportado → no bloquear tilde
             if ante_que in VERBOS_ANUNCIO:
@@ -1401,11 +1405,7 @@ def _procesar_parrafo_ngram(text: str) -> str:
                     continue
                 continue
 
-            AFIRMACION_CONTEXTO = VERBOS_3RA | VERBOS_2DA | {"vaya", "viene", "claro"}
-            if sig in AFIRMACION_CONTEXTO:
-                cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
-                continue
-
+            # "por sí mismo", "en sí misma" → pronombre reflexivo enfático
             if anterior in {"para", "por", "en", "de", "a"} and sig in CLITICOS | {"mismo", "misma"}:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
@@ -1415,7 +1415,12 @@ def _procesar_parrafo_ngram(text: str) -> str:
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
 
-            if sig in CLITICOS:
+            # RAE: "si" seguido de verbo conjugado o clítico+verbo en posición
+            # mid-sentence es conjunción condicional, no adverbio afirmativo.
+            # Solo se añade tilde cuando hay evidencia positiva de afirmación:
+            # la palabra anterior termina en coma (", sí lo haré").
+            AFIRMACION_CONTEXTO = VERBOS_3RA | VERBOS_2DA | {"vaya", "viene", "claro"}
+            if anterior_raw.endswith(',') and (sig in AFIRMACION_CONTEXTO or sig in CLITICOS):
                 cambios.append((i, prefijo + _tildar(nucleo_orig, "si", "sí") + sufijo))
                 continue
 
@@ -1522,19 +1527,22 @@ def correct_grammar(text: str) -> str:
         text = re.sub(patron, lambda m: m.group(1) + ',', text)
 
     # 5. Coma antes de conjunciones adversativas
+    # RAE: no se inserta coma cuando ya hay signo de puntuación fuerte antes
+    # (punto y coma, punto, interrogación, exclamación) — evita ";, pero".
     text = re.sub(
-        r'(?<![,]) \b(pero|aunque|sino)\b',
+        r'(?<![,;.!?]) \b(pero|aunque|sino)\b',
         lambda m: ', ' + m.group(1),
         text
     )
 
     # 5.1 Coma ante "quien" en cláusulas explicativas (relativo no restrictivo)
+    # El grupo capturado excluye signos de puntuación para evitar "programar;, quien".
     _BLOQ_QUIEN = {"a", "para", "con", "de", "por", "sin", "ante", "sobre",
                    "tras", "se", "sé", "sabe", "sabes", "no", "es", "era",
                    "que", "lo", "al", "del", "ni", "hay"}
     def _fix_quien_comma(m):
         return m.group(0) if m.group(1).lower() in _BLOQ_QUIEN else m.group(1) + ', ' + m.group(2)
-    text = re.sub(r'([^\s,]+) (quien)\b', _fix_quien_comma, text, flags=re.IGNORECASE)
+    text = re.sub(r'([^\s,;.!?]+) (quien)\b', _fix_quien_comma, text, flags=re.IGNORECASE)
 
     # 5.2 Comas alrededor de "por ejemplo" en el interior de una oración
     text = re.sub(
@@ -1544,8 +1552,10 @@ def correct_grammar(text: str) -> str:
     )
 
     # 5.5 Verbos en pasado sin tilde
+    # RAE: "de" introduce sintagma preposicional donde el verbo no puede ser
+    # pretérito de 1ª persona ("de doble filo" → adjetivo, no "doblé").
     BLOQUEADORES_SUBJ = {"para", "si", "aunque",
-                         "ojalá", "el", "un", "la", "una", "mi", "tu", "su", "antes"}
+                         "ojalá", "el", "un", "la", "una", "mi", "tu", "su", "antes", "de"}
 
     AMBIGUOS = {"trabajo", "estudio", "caso", "trato", "cambio",
             "inicio", "termino", "aumento", "bajo",
@@ -1642,11 +1652,15 @@ def correct_grammar(text: str) -> str:
             resultado.append(palabra)
             continue
 
+        # RAE: "se + verbo-e" es reflexivo/impersonal o subjuntivo, nunca pretérito
+        # de 1ª persona ("se doble", "se revise", "se aplique").
+        _es_se_subj = anterior == "se" and nucleo.endswith("e")
+
         if nucleo in VERBOS_PASADO_1RA and (
             anterior not in bloqueadores_efectivos or
             anterior_orig in FORZADORES_PASADO or
             (anterior == "el" and nucleo not in AMBIGUOS)
-        ) and not anterior_es_futuro:
+        ) and not anterior_es_futuro and not _es_se_subj:
             _AMBIGUOS_BLOQ = {"el", "al", "un", "la", "una",
                               "mi", "tu", "su", "del", "este",
                               "ese", "aquel", "nuestro", "cada", "de",
