@@ -84,8 +84,9 @@ def _coma_en_enumeracion_nombres_propios(text: str) -> str:
     )
     # Artículo + 1-2 palabras de cualquier caso (3+ chars cada una).
     # Cubre: "el Caribe" (art+Cap), "la salud" (art+lower), "el océano Índico"
-    # (art+lower+Cap), "el medio ambiente" (art+lower+lower).
-    _ART_WORD = r'[a-záéíóúüñA-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{2,}'
+    # (art+lower+Cap), "el medio ambiente" (art+lower+lower),
+    # "el TDAH" / "la UNESCO" (art+sigla todo-mayúsculas).
+    _ART_WORD = r'[a-záéíóúüñA-ZÁÉÍÓÚÜÑ][a-záéíóúüñA-ZÁÉÍÓÚÜÑ]{2,}'
     # RAE: preposiciones y contracciones forman sintagma indivisible con su complemento
     # y nunca son el último componente de un elemento de enumeración.
     _PREPS = (
@@ -155,7 +156,7 @@ def _coma_en_enumeracion_sustantivos(text: str) -> str:
     _GN = r'(?:' + _WORD_CONTENT + r'(?:\s+' + _WORD_CONTENT + r')?)'
 
     patron = re.compile(
-        r'(' + _GN + r') (' + _GN + r')'
+        r'(' + _GN + r') (' + _GN + r')(?!,)'
         r'(?=(?:(?:, | )' + _GN + r')* (?:y|o|ni) ' + _GN + r')'
     )
 
@@ -182,7 +183,11 @@ def _coma_en_enumeracion_sustantivos(text: str) -> str:
             return m.group(0)
         return m.group(1) + ', ' + m.group(2)
 
-    return patron.sub(_sub, text)
+    anterior = None
+    while anterior != text:
+        anterior = text
+        text = patron.sub(_sub, text)
+    return text
 
 
 _GEONOMBRES = {
@@ -232,6 +237,7 @@ _GEONOMBRES = {
     "niger": "Níger",
     # Estados mexicanos que LT no capitaliza por ser palabras comunes en español
     "guerrero": "Guerrero",
+    "campeche": "Campeche",
 }
 
 

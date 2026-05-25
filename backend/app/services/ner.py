@@ -233,6 +233,7 @@ def capitalizar_entidades(text: str) -> str:
     # formas verbales con tilde de pretérito (ó/é), y el apellido debe aparecer
     # DESPUÉS del nombre en el texto (para no capitalizar adjetivos pre-posicionados).
     _titulo_con_nombre: dict[int, int] = {}  # título.idx → último nombre.idx
+    _nombre_tok_i: set[int] = set()  # doc token indices de nombres de Paso 1
     for token in doc:
         if (token.dep_ == "appos" and
                 token.head.text in TITULOS_MINUSCULA and
@@ -258,10 +259,12 @@ def capitalizar_entidades(text: str) -> str:
                 if token.idx < len(resultado) and resultado[token.idx].islower():
                     resultado[token.idx] = resultado[token.idx].upper()
                 _titulo_con_nombre[token.head.idx] = token.idx
+                _nombre_tok_i.add(token.i)
             elif token.pos_ in {"PROPN", "NOUN"}:
                 # Nombre que ya termina en é/ó (ej: "José") — ya capitalizado por LT.
                 # Registrar igual para que Step 2b pueda encontrar el apellido que sigue.
                 _titulo_con_nombre[token.head.idx] = token.idx
+                _nombre_tok_i.add(token.i)
     for token in doc:
         if (token.ent_type_ == "" and
                 not token.is_stop and
@@ -293,6 +296,30 @@ def capitalizar_entidades(text: str) -> str:
             if not any(_orig.endswith(t) for t in ('ó', 'é', 'ó.', 'é.')):
                 if token.idx < len(resultado) and resultado[token.idx].islower():
                     resultado[token.idx] = resultado[token.idx].upper()
+
+    # E6 Paso 2c: apellido con dep_=ROOT que sigue inmediatamente al nombre de Paso 1.
+    # spaCy asigna dep_=ROOT al apellido cuando lo confunde con el verbo principal
+    # en input sin mayúsculas (ej: "jose vega añadio" → vega=VERB/ROOT, añadio=ccomp).
+    # Guarda: el propio token NO termina en ó/é (no es pretérito) Y el token SIGUIENTE
+    # en resultado SÍ termina en ó/é (ese es el verbo pretérito real).
+    for token in doc:
+        if (token.ent_type_ == "" and
+                not token.is_stop and
+                token.i > 0 and (token.i - 1) in _nombre_tok_i and
+                token.pos_ in {"VERB", "NOUN", "PROPN"}):
+            _end = token.idx + len(token.text)
+            _orig = ''.join(resultado[token.idx:_end]) if _end <= len(resultado) else ''
+            if any(_orig.endswith(t) for t in ('ó', 'é', 'ó.', 'é.')):
+                continue  # pretérito → verbo real, no apellido
+            nn_i = token.i + 1
+            if nn_i < len(doc):
+                nn = doc[nn_i]
+                nn_end = nn.idx + len(nn.text)
+                nn_word = ''.join(resultado[nn.idx:nn_end]) if nn_end <= len(resultado) else ''
+                if not any(nn_word.endswith(t) for t in ('ó', 'é', 'ó.', 'é.')):
+                    continue  # siguiente no es pretérito → no es apellido
+            if token.idx < len(resultado) and resultado[token.idx].islower():
+                resultado[token.idx] = resultado[token.idx].upper()
 
     # Estrategia 3: secuencia de 2+ PROPNs sin entidad → nombre propio
     # Cubre "ana patricia torres" cuando el contexto largo rompe el NER de spaCy.

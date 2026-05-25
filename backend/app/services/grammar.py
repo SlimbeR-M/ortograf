@@ -1563,6 +1563,7 @@ def correct_grammar(text: str) -> str:
             "critico",  # criticar (pasado) vs adjetivo/sustantivo "crítico"
             "diagnostico",  # diagnosticar (pasado) vs sustantivo "diagnóstico"
             "diseño",  # diseñar (pasado) vs sustantivo "diseño"
+            "publico",  # publicar (pasado) vs adjetivo "público"
             }
 
     # Formas esdrújulas correctas para palabras en AMBIGUOS cuando son sustantivos/adjetivos
@@ -1570,6 +1571,7 @@ def correct_grammar(text: str) -> str:
         "diagnostico": "diagnóstico",
         "critico": "crítico",
         "termino": "término",
+        "publico": "público",
     }
 
     VERBOS_PRESENTE_1RA = {"espero", "busco", "necesito", "quiero",
@@ -1703,6 +1705,22 @@ def correct_grammar(text: str) -> str:
                 # Último elemento de enumeración nominal tras conjunción coordinante:
                 # "investigación, innovación y desarrollo" → sustantivo, no verbo.
                 resultado.append(palabra)
+            elif (nucleo in AMBIGUOS and
+                  siguiente in _ARTS_DIRECTOS and
+                  j + 2 < len(palabras) and
+                  _limpiar_nucleo(palabras[j + 2]) == anterior):
+                # Patrón "N adj DET N": siguiente DET introduce construcción paralela
+                # con el mismo núcleo nominal (ej: "sector público el sector privado").
+                # RAE: adj modificador, no verbo transitivo.
+                if nucleo in _FORMAS_ESDRUJULO:
+                    _m_suf_p = re.search(r'(["\'\?!,\.;:\)\]]+)$', palabra)
+                    _suf_p = _m_suf_p.group(1) if _m_suf_p else ""
+                    esdruj_form = _FORMAS_ESDRUJULO[nucleo]
+                    if palabra[0].isupper():
+                        esdruj_form = esdruj_form[0].upper() + esdruj_form[1:]
+                    resultado.append(esdruj_form + _suf_p)
+                else:
+                    resultado.append(palabra)
             else:
                 # Preservar puntuación final (ej: "estudió." cuando es verbo ante punto)
                 _m_suf_verbo = re.search(r'["\'\?!,\.;:\)\]]+$', palabra)
