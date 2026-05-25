@@ -12,6 +12,7 @@ const text = document.querySelector("#user-input"),
 let esperandoRespuesta = false,
     cancelado = false,
     debounceTimer = null,
+    abortController = null,
     erroresActuales = [];
 
 text.addEventListener("input", () => {
@@ -19,9 +20,10 @@ text.addEventListener("input", () => {
         buttonText.disabled = false;
     } else {
         buttonText.disabled = true;
+        erroresActuales = [];
     }
     text.style.height = "auto";
-    const nuevoAlto = text.scrollHeight + "px";
+    const nuevoAlto = (text.value === '' ? 40 : text.scrollHeight) + "px";
     text.style.height = nuevoAlto;
     highlight.style.height = nuevoAlto;
 
@@ -42,7 +44,7 @@ text.addEventListener("scroll", () => {
 
 buttonText.addEventListener("click", async() => {
     if(esperandoRespuesta) {
-        cancelado = true;
+        if(abortController) abortController.abort();
         esperandoRespuesta = false;
         icono.src = "/src/assets/enviar.png";
         buttonText.disabled = true;
@@ -50,23 +52,34 @@ buttonText.addEventListener("click", async() => {
         return;
     }
 
-    cancelado = false;
     esperandoRespuesta = true;
+
+    // Capturar errores antes de limpiar (Bug 2 & 4)
+    const erroresParaMensaje = [...erroresActuales];
 
     // Mensaje del usuario
     let texto = text.value;
     const mensaje = document.createElement("div");
     mensaje.className = "message message--user";
     mensaje.innerHTML = `<p class="message__bubble">${texto.replace(/\n/g, '<br>')}</p>`;
+
+    // Aplicar highlight de errores inmediatamente, sin esperar la IA (Bug 2)
+    if (erroresParaMensaje.length > 0) {
+        const sorted = [...erroresParaMensaje].sort((a, b) => b.offset - a.offset);
+        let resaltado = texto;
+        sorted.forEach(err => {
+            const antes = resaltado.slice(0, err.offset);
+            const palabra = resaltado.slice(err.offset, err.offset + err.error_length);
+            const despues = resaltado.slice(err.offset + err.error_length);
+            resaltado = `${antes}<span class="error-highlight">${palabra}</span>${despues}`;
+        });
+        mensaje.querySelector('.message__bubble').innerHTML = resaltado.replace(/\n/g, '<br>');
+    }
+
     chat.appendChild(mensaje);
 
-    //Limpiar y desabilitar
     bienvenida.style.display = "none";
-    text.value = '';
-    text.style.height = "auto";
-    highlight.innerHTML = '';          
-    highlight.style.height = "auto"; 
-    erroresActuales = []; 
+    resetTextarea();
 
     //indicador de pensamiento
     const typing= document.createElement("div");
@@ -78,10 +91,22 @@ buttonText.addEventListener("click", async() => {
 
     icono.src = "/src/assets/cancelar.png";
     buttonText.disabled = false;
-    const datos = await respuestaIA(texto)
-    
 
-    // Mostrar errores en burbuja de usuario
+    abortController = new AbortController();
+    let datos;
+    try {
+        datos = await respuestaIA(texto, abortController.signal);
+    } catch(e) {
+        if(e.name === 'AbortError') {
+            typing.remove();
+            return;
+        }
+        throw e;
+    }
+
+    if(!datos) return;
+
+    // Re-aplicar highlight más preciso usando datos.cambios de la IA
     if (datos.cambios && datos.cambios.length > 0) {
         const erroresSet = new Set(
             datos.cambios
@@ -105,13 +130,6 @@ buttonText.addEventListener("click", async() => {
         })
 
         mensaje.querySelector('.message__bubble').innerHTML = resultado.join('')
-    }
-
-    if(cancelado) {
-        typing.remove();
-        esperandoRespuesta = false;
-        text.disabled = false;
-        return;
     }
 
     // Construir HTML de la respuesta
@@ -151,7 +169,7 @@ buttonText.addEventListener("click", async() => {
     // Guardar en historial si hay sesión
     if (usuarioActual) {
         document.dispatchEvent(new CustomEvent("chatMensajeGuardado", {
-            detail: { 
+            detail: {
                 usuario: mensaje.querySelector('.message__bubble').innerHTML,
                 ia: html
             }
@@ -170,6 +188,16 @@ text.addEventListener("keydown", (tecla) => {
         }
     }
 } );
+
+function resetTextarea() {
+    clearTimeout(debounceTimer);
+    text.value = '';
+    text.style.height = '40px';
+    highlight.innerHTML = '';
+    highlight.style.height = '40px';
+    buttonText.disabled = true;
+    erroresActuales = [];
+}
 
 const mostrarErrores = (texto, errores) => {
     erroresActuales = errores || [];
