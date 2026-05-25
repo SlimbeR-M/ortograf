@@ -1686,7 +1686,15 @@ def correct_grammar(text: str) -> str:
                                     "nuestro", "cada", "de", "por", "para", "con"}
                  and (anterior in _AMBIGUOS_BLOQ or anterior in _MODS_PREVIOS)) or
                 (len(siguiente_adj) >= 4 and
-                 any(siguiente_adj.endswith(s) for s in _SUFIJOS_ADJ))
+                 any(siguiente_adj.endswith(s) for s in _SUFIJOS_ADJ)) or
+                # RAE: dos verbos finitos no pueden ser consecutivos sin conjunción.
+                # Si el siguiente también parece verbo pretérito y el contexto anterior
+                # es un sintagma nominal (DET+SUST), la palabra AMBIGUA es adjetivo.
+                (siguiente_adj in VERBOS_PASADO_1RA and
+                 anterior_a_que in {"el", "al", "un", "la", "una", "mi", "tu",
+                                    "su", "del", "este", "ese", "aquel",
+                                    "nuestro", "cada", "de", "por", "para", "con"} and
+                 len(anterior) > 2)
             ):
                 # Sustantivo/adjetivo: aplicar forma esdrújula si corresponde
                 if nucleo in _FORMAS_ESDRUJULO:
