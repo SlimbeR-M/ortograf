@@ -37,22 +37,40 @@
 }
 
 .sidebar__profile-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-full);
-    background-color: var(--color-accent);
-    color: #fff;
     font-size: var(--font-size-sm);
     font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: background-color var(--transition-fast);
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 
-.sidebar__profile-btn:hover {
+/* Con sesión: círculo con inicial */
+.sidebar__profile-btn--avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background-color: var(--color-accent);
+    color: #fff;
+}
+
+.sidebar__profile-btn--avatar:hover {
     background-color: var(--color-accent-hover);
+}
+
+/* Sin sesión: botón outline de texto */
+.sidebar__profile-btn--login {
+    padding: var(--space-1) var(--space-3);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.sidebar__profile-btn--login:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
 }
 
 /* ── Nav ── */

@@ -1,3 +1,4 @@
+import re
 import difflib
 
 from app.services.normalize import normalize
@@ -12,7 +13,7 @@ from app.services.ner import capitalizar_entidades
 from app.services.homofonos import resolver_homofonos
 from app.services.correcciones import aplicar_correcciones_forzadas
 from app.services.semantic import apply_semantic_map
-from app.services.gemini import pulir_con_gemini
+from app.services.gemini import pulir_con_gemini, detectar_ambiguedad
 
 
 def _cambios_gemini(texto_corregido: str, texto_gemini: str) -> list:
@@ -33,14 +34,13 @@ def _cambios_gemini(texto_corregido: str, texto_gemini: str) -> list:
     return cambios
 
 
-def correct_text(text: str):
-    texto_original = text
+def _pipeline_parrafo(parrafo: str) -> str:
+    """Pasos 1-8 del pipeline aplicados a un párrafo individual."""
+    text = parrafo
 
-    # 1. Slang primero — antes de cualquier análisis
+    # 1. Slang + correcciones forzadas + semántico
     text = replace_slang(text)
     text = aplicar_correcciones_forzadas(text)
-
-    # 1b. Mapa semántico — frases coloquiales → términos formales/técnicos
     try:
         text = apply_semantic_map(text)
     except Exception:
@@ -49,16 +49,10 @@ def correct_text(text: str):
     # 2. Normalización
     text = normalize(text)
 
-    # 3. Proteger términos técnicos
+    # 3-6. Ortografía con protección de técnicos
     text, mapa_tech = proteger_tecnicos(text)
-
-    # 4. Corrección ortográfica
     text = correct_spelling(text)
-
-    # 5. Corrección gramatical
     text = correct_grammar(text)
-
-    # 6. Restaurar técnicos
     text = restaurar_tecnicos(text, mapa_tech)
 
     # 7. Homófonos
@@ -67,12 +61,30 @@ def correct_text(text: str):
     # 8. NER
     text = capitalizar_entidades(text)
 
-    # 9. Postproceso
-    text = finalize_text(text)
+    return text
+
+
+def correct_text(text: str):
+    texto_original = text
+
+    # Reducir saltos excesivos y dividir en párrafos por línea en blanco
+    text_prep = re.sub(r'\n{3,}', '\n\n', text)
+    parrafos = text_prep.split('\n\n')
+
+    # Pasos 1-8: cada párrafo se procesa de forma independiente
+    # Esto evita que correct_spelling colapse los \n\n al unir tokens
+    parrafos_corr = [
+        _pipeline_parrafo(p) if p.strip() else ''
+        for p in parrafos
+    ]
+
+    # 9. Postproceso sobre el texto completo reunido
+    # finalize_text ya procesa párrafo por párrafo internamente
+    text = finalize_text('\n\n'.join(parrafos_corr))
 
     texto_corregido = text
 
-    # 10. Pulido semántico con Gemini (opcional — se omite si GEMINI_API_KEY no está configurada)
+    # 10. Pulido semántico con Groq/Gemini (opcional)
     texto_gemini = pulir_con_gemini(texto_original, texto_corregido)
 
     # Cambios del pipeline (original → pipeline)
@@ -84,10 +96,17 @@ def correct_text(text: str):
 
     score = calcular_score(texto_original, texto_gemini, n_cambios_gemini=len(extras))
 
+    alternativa = None
+    try:
+        alternativa = detectar_ambiguedad(texto_original, texto_gemini)
+    except Exception:
+        pass
+
     return {
         "texto_corregido": texto_gemini,
         "cambios": cambios,
-        "score": score
+        "score": score,
+        "alternativa": alternativa
     }
 
 

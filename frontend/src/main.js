@@ -22,8 +22,8 @@ text.addEventListener("input", () => {
         buttonText.disabled = true;
         erroresActuales = [];
     }
-    text.style.height = "auto";
-    const nuevoAlto = (text.value === '' ? 40 : text.scrollHeight) + "px";
+    text.style.height = "40px";
+    const nuevoAlto = text.value === '' ? "40px" : text.scrollHeight + "px";
     text.style.height = nuevoAlto;
     highlight.style.height = nuevoAlto;
 
@@ -54,11 +54,17 @@ buttonText.addEventListener("click", async() => {
 
     esperandoRespuesta = true;
 
+    // Bloquear bloques de ambigüedad del turno anterior
+    chat.querySelectorAll('.ambig-block:not(.ambig-block--locked)').forEach(b => {
+        b.classList.add('ambig-block--locked');
+    });
+
     // Capturar errores antes de limpiar (Bug 2 & 4)
     const erroresParaMensaje = [...erroresActuales];
 
     // Mensaje del usuario
-    let texto = text.value;
+    let texto = text.value.replace(/^\n+|\n+$/g, '').trim();
+    texto = texto.replace(/\n{3,}/g, '\n\n');
     const mensaje = document.createElement("div");
     mensaje.className = "message message--user";
     mensaje.innerHTML = `<p class="message__bubble">${texto.replace(/\n/g, '<br>')}</p>`;
@@ -133,7 +139,8 @@ buttonText.addEventListener("click", async() => {
     }
 
     // Construir HTML de la respuesta
-    let html = `<p class="message__bubble">${datos.texto_corregido.replace(/\n/g, '<br>')}</p>`
+    const textoCorregido = datos.texto_corregido.replace(/\n{3,}/g, '\n\n');
+    let html = `<p class="message__bubble">${textoCorregido.replace(/\n/g, '<br>')}</p>`
 
     // Score del usuario
     if (datos.score) {
@@ -147,18 +154,21 @@ buttonText.addEventListener("click", async() => {
 
     // Cambios realizados
     if (datos.cambios && datos.cambios.length > 0) {
-        html += `<div class="message__cambios">`
-        datos.cambios.forEach(c => {
-            if (c.tipo === 'reemplazo') {
-                html += `<span class="cambio-tag">📝 ${c.razon}</span>`
-            }
-        })
-        html += `</div>`
+        html += buildCambiosHTML(datos.cambios);
+    }
+
+    // Alternativa por ambigüedad
+    if (datos.alternativa && datos.alternativa.tiene_ambiguedad) {
+        html += buildAlternativaHTML(datos.alternativa);
     }
 
     //mostrar respuesta
     typing.className = "message message--ai";
     typing.innerHTML = html;
+    attachCambiosToggles(typing);
+    if (datos.alternativa && datos.alternativa.tiene_ambiguedad) {
+        attachAmbigHandlers(typing, texto, datos.alternativa);
+    }
     chatDisplay.scrollTo({ top: chatDisplay.scrollHeight, behavior: 'smooth' });
     text.disabled = false;
     esperandoRespuesta = false;
@@ -197,6 +207,193 @@ function resetTextarea() {
     highlight.style.height = '40px';
     buttonText.disabled = true;
     erroresActuales = [];
+}
+
+function diffPalabras(original, corregido) {
+    const normalizar = s => s.toLowerCase()
+        .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i')
+        .replace(/ó/g,'o').replace(/ú/g,'u').replace(/ü/g,'u').replace(/ñ/g,'n');
+
+    const razon = (orig, corr) => {
+        const oL = orig.toLowerCase(), cL = corr.toLowerCase();
+        const oN = normalizar(orig), cN = normalizar(corr);
+        if (oL === cL && orig !== corr) return `Mayúscula corregida: '${orig}' → '${corr}'`;
+        if (oN === cN && oL !== cL)    return `Tilde corregida: '${orig}' → '${corr}'`;
+        if (oN === cN && orig !== corr) return `Tilde y mayúscula corregidas: '${orig}' → '${corr}'`;
+        return `Ortografía corregida: '${orig}' → '${corr}'`;
+    };
+
+    const origWords = original.split(/\s+/).filter(Boolean);
+    const corrWords = corregido.split(/\s+/).filter(Boolean);
+    const m = origWords.length, n = corrWords.length;
+
+    // LCS DP table
+    const dp = Array.from({length: m + 1}, () => new Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            dp[i][j] = origWords[i-1] === corrWords[j-1]
+                ? dp[i-1][j-1] + 1
+                : Math.max(dp[i-1][j], dp[i][j-1]);
+        }
+    }
+
+    // Backtrack collecting individual del/ins ops
+    const ops = [];
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && origWords[i-1] === corrWords[j-1]) {
+            i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+            ops.unshift({ type: 'ins', word: corrWords[j-1] });
+            j--;
+        } else {
+            ops.unshift({ type: 'del', word: origWords[i-1] });
+            i--;
+        }
+    }
+
+    // Pair adjacent del+ins as individual word replacements
+    const cambios = [];
+    let k = 0;
+    while (k < ops.length) {
+        if (ops[k].type === 'del' && k + 1 < ops.length && ops[k+1].type === 'ins') {
+            const o = ops[k].word, c = ops[k+1].word;
+            cambios.push({ tipo: 'reemplazo', original: o, corregido: c, razon: razon(o, c) });
+            k += 2;
+        } else if (ops[k].type === 'del') {
+            cambios.push({ tipo: 'reemplazo', original: ops[k].word, corregido: '', razon: `Ortografía corregida: '${ops[k].word}' → ''` });
+            k++;
+        } else {
+            cambios.push({ tipo: 'reemplazo', original: '', corregido: ops[k].word, razon: `Ortografía corregida: '' → '${ops[k].word}'` });
+            k++;
+        }
+    }
+    return cambios;
+}
+
+function buildCambiosHTML(cambios) {
+    const reemplazos = cambios.filter(c => c.original && c.original.trim());
+    if (reemplazos.length === 0) return '';
+
+    const cats = [
+        { emoji: '🔤', label: 'Tildes y acentos',   test: r => /[Tt]ilde/.test(r),             items: [] },
+        { emoji: '📍', label: 'Mayúsculas',          test: r => /[Mm]ayúscula/.test(r),         items: [] },
+        { emoji: '✏️', label: 'Puntuación',          test: r => /[Pp]untuación/.test(r),        items: [] },
+        { emoji: '🔁', label: 'Semántica/gramática', test: r => /semántica|gramatical/.test(r), items: [] },
+        { emoji: '➡️', label: 'Ortografía',          test: null,                                items: [] },
+    ];
+
+    reemplazos.forEach(c => {
+        const r = c.razon || '';
+        (cats.find(cat => cat.test && cat.test(r)) || cats[cats.length - 1]).items.push(c);
+    });
+
+    let catsHTML = '';
+    cats.forEach(cat => {
+        if (cat.items.length === 0) return;
+        const items = cat.items.map(c =>
+            `<li class="cambios-cat__item"><span class="cambios-original">${c.original}</span><span class="cambios-arrow"> → </span><span class="cambios-corregido">${c.corregido}</span></li>`
+        ).join('');
+        catsHTML += `<div class="cambios-cat cambios-section">
+            <button class="cambios-cat__header cambios-toggle" type="button"><span class="cambios-chevron">▶</span>${cat.emoji} ${cat.label} (${cat.items.length})</button>
+            <div class="cambios-section__body"><div class="cambios-section__inner"><ul class="cambios-cat__list">${items}</ul></div></div>
+        </div>`;
+    });
+
+    return `<div class="cambios-resumen cambios-section">
+        <button class="cambios-resumen__header cambios-toggle" type="button"><span class="cambios-chevron">▶</span>📋 Ver correcciones (${reemplazos.length})</button>
+        <div class="cambios-section__body"><div class="cambios-section__inner">${catsHTML}</div></div>
+    </div>`;
+}
+
+function buildAlternativaHTML(alt) {
+    const a = alt.opcion_a, b = alt.opcion_b;
+    return `<div class="ambig-block cambios-section">
+        <button class="ambig-header cambios-toggle" type="button"><span class="cambios-chevron">▶</span>🔀 ¿Tu intención era otra?</button>
+        <div class="cambios-section__body"><div class="cambios-section__inner">
+            <div class="ambig-cards">
+                <div class="ambig-card ambig-card--a">
+                    <span class="ambig-card__label">${a.etiqueta}</span>
+                    <p class="ambig-card__text">${a.texto.replace(/\n/g, '<br>')}</p>
+                    <span class="ambig-card__desc">${a.descripcion}</span>
+                </div>
+                <div class="ambig-card ambig-card--b">
+                    <span class="ambig-card__label">${b.etiqueta}</span>
+                    <p class="ambig-card__text">${b.texto.replace(/\n/g, '<br>')}</p>
+                    <span class="ambig-card__desc">${b.descripcion}</span>
+                </div>
+            </div>
+        </div></div>
+    </div>`;
+}
+
+function attachAmbigHandlers(messageDiv, textoOriginal, alternativa) {
+    const block = messageDiv.querySelector('.ambig-block');
+    if (!block) return;
+
+    const cards = block.querySelectorAll('.ambig-card');
+    if (cards.length < 2) return;
+
+    const bubble = messageDiv.querySelector('.message__bubble');
+    const opciones = [alternativa.opcion_a, alternativa.opcion_b];
+
+    cards.forEach((card, idx) => {
+        card.addEventListener('click', () => {
+            if (block.classList.contains('ambig-block--locked')) return;
+
+            const opcion = opciones[idx];
+
+            // Actualizar burbuja con el texto de la opción elegida
+            const textoNuevo = opcion.texto.replace(/\n{3,}/g, '\n\n');
+            bubble.innerHTML = textoNuevo.replace(/\n/g, '<br>');
+
+            // Recalcular correcciones entre texto original del usuario y la opción
+            const nuevosCambios = diffPalabras(textoOriginal, opcion.texto);
+            const resumen = messageDiv.querySelector('.cambios-resumen');
+            if (resumen) {
+                const nuevoHTML = buildCambiosHTML(nuevosCambios);
+                if (nuevoHTML) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = nuevoHTML;
+                    resumen.replaceWith(temp.firstElementChild);
+                    const nuevoEl = messageDiv.querySelector('.cambios-resumen');
+                    if (nuevoEl) attachCambiosToggles(nuevoEl);
+                } else {
+                    resumen.remove();
+                }
+            }
+
+            // Marcar visualmente la opción elegida
+            cards.forEach((c, i) => {
+                c.classList.toggle('ambig-card--selected', i === idx);
+                c.classList.toggle('ambig-card--inactive', i !== idx);
+            });
+
+            // Actualizar score de ortografía según los cambios de la opción elegida
+            const scoreEl = messageDiv.querySelector('.message__score');
+            if (scoreEl) {
+                const errores = nuevosCambios.length;
+                const palabras = Math.max(1, textoOriginal.split(/\s+/).filter(Boolean).length);
+                const pct = Math.max(0, Math.round(100 - (errores / palabras * 20)));
+                const color = pct >= 75 ? '#4caf50' : pct >= 50 ? '#ff9800' : '#f44336';
+                const nivel = pct >= 75 ? 'Excelente' : pct >= 50 ? 'Bueno' : 'Necesita mejora';
+                const spanOrto = scoreEl.querySelector('span');
+                if (spanOrto) {
+                    spanOrto.style.color = color;
+                    spanOrto.textContent = `🔤 Ortografía: ${pct}% — ${nivel}`;
+                }
+            }
+        });
+    });
+}
+
+function attachCambiosToggles(container) {
+    container.querySelectorAll('.cambios-toggle').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            btn.closest('.cambios-section').classList.toggle('cambios-section--open');
+        });
+    });
 }
 
 const mostrarErrores = (texto, errores) => {
@@ -507,12 +704,12 @@ function cerrarSesion() {
 function actualizarBotonPerfil() {
     if (usuarioActual) {
         profileInitial.textContent = usuarioActual.nombre[0].toUpperCase();
-        profileBtn.style.backgroundColor = "var(--color-accent)";
-        profileBtn.style.color = "#fff";
+        profileBtn.classList.add('sidebar__profile-btn--avatar');
+        profileBtn.classList.remove('sidebar__profile-btn--login');
     } else {
-        profileInitial.textContent = "?";
-        profileBtn.style.backgroundColor = "";
-        profileBtn.style.color = "";
+        profileInitial.textContent = "Iniciar sesión";
+        profileBtn.classList.remove('sidebar__profile-btn--avatar');
+        profileBtn.classList.add('sidebar__profile-btn--login');
     }
 }
 
@@ -534,8 +731,8 @@ const tokenGuardado = localStorage.getItem("token");
 const usuarioGuardado = localStorage.getItem("usuario");
 if (tokenGuardado && usuarioGuardado) {
     usuarioActual = JSON.parse(usuarioGuardado);
-    actualizarBotonPerfil();
 }
+actualizarBotonPerfil();
 
 
 // ─── HISTORIAL DE CHATS ───────────────────────────────────────────────────────
@@ -609,6 +806,8 @@ async function cargarChat(id) {
             } else {
                 div.className = "message message--ai";
                 div.innerHTML = m.contenido;
+                attachCambiosToggles(div);
+                div.querySelectorAll('.ambig-block').forEach(b => b.classList.add('ambig-block--locked'));
             }
             chat.appendChild(div);
         });
