@@ -1,3 +1,8 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
+print(f"[STARTUP] GEMINI_API_KEY configurada: {bool(os.getenv('GEMINI_API_KEY'))}")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel

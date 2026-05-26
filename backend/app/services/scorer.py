@@ -23,7 +23,7 @@ def _filtrar_errores(errores, texto):
     return filtrados
 
 
-def calcular_score(texto_original: str, texto_corregido: str) -> dict:
+def calcular_score(texto_original: str, texto_corregido: str, n_cambios_gemini: int = 0) -> dict:
     palabras = len(texto_original.split())
 
     if palabras == 0:
@@ -50,6 +50,10 @@ def calcular_score(texto_original: str, texto_corregido: str) -> dict:
         else:
             pen_orto += 2
             pen_gram += 2
+
+    # Penalización por errores semánticos/gramaticales que Gemini detectó y LT no
+    pen_orto += 3 * n_cambios_gemini
+    pen_gram += 4 * n_cambios_gemini
 
     def calcular(penalizacion):
         score = max(0, 100 - (penalizacion / palabras * 20))
