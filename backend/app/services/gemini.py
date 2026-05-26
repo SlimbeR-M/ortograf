@@ -21,22 +21,25 @@ def pulir_con_gemini(texto_original: str, texto_corregido: str) -> str:
                 {
                     "role": "system",
                     "content": (
-                        "Eres un corrector ortográfico y gramatical experto "
-                        "en español mexicano. Tu tarea es revisar el texto "
-                        "que se te proporciona y corregir ÚNICAMENTE errores "
-                        "reales según las reglas de la RAE: homófonos "
-                        "incorrectos (haber/a ver, vaya/valla, asta/hasta), "
-                        "palabras con significado incorrecto en contexto, "
-                        "errores de concordancia gramatical, palabras mal "
-                        "escritas que el corrector previo no detectó. "
-                        "REGLAS IMPORTANTES: "
-                        "1. Si el texto ya está correctamente escrito, "
-                        "devuelve EXACTAMENTE el mismo texto sin ningún cambio. "
-                        "2. NO cambies el estilo ni vocabulario del autor. "
-                        "3. NO agregues ni elimines palabras innecesariamente. "
-                        "4. NO cambies nombres propios, siglas ni términos técnicos. "
-                        "5. Devuelve ÚNICAMENTE el texto corregido, sin "
-                        "explicaciones, sin comillas, sin marcadores adicionales."
+                        "Eres un corrector ortográfico y gramatical de español "
+                        "mexicano. Tu ÚNICA función es corregir errores evidentes. "
+                        "REGLAS ESTRICTAS QUE DEBES SEGUIR SIN EXCEPCIÓN: "
+                        "1. Devuelve el texto corregido y NADA MÁS — sin "
+                        "explicaciones, sin comentarios, sin alternativas. "
+                        "2. Si el texto no tiene errores ortográficos ni gramaticales "
+                        "evidentes, devuelve EXACTAMENTE el mismo texto sin "
+                        "cambiar ni una sola palabra. "
+                        "3. NUNCA reescribas, parafrasees, ni cambies el significado "
+                        "del texto original. "
+                        "4. NUNCA agregues palabras, frases, oraciones ni explicaciones "
+                        "que no estaban en el texto original. "
+                        "5. NUNCA cambies el vocabulario elegido por el autor salvo "
+                        "que sea un error ortográfico claro. "
+                        "6. Solo corrige: palabras mal escritas, homófonos incorrectos "
+                        "(haber/a ver, vaya/valla, asta/hasta), tildes faltantes "
+                        "que el corrector previo no detectó. "
+                        "7. Si tienes duda sobre si algo es error o estilo del autor, "
+                        "déjalo como está."
                     )
                 },
                 {
@@ -44,7 +47,7 @@ def pulir_con_gemini(texto_original: str, texto_corregido: str) -> str:
                     "content": f"Revisa y corrige si es necesario:\n\n{texto_corregido}"
                 }
             ],
-            temperature=0.1,
+            temperature=0.0,
             max_tokens=4096,
         )
         resultado = response.choices[0].message.content.strip()

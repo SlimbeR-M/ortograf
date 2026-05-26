@@ -2,7 +2,6 @@
   "animales sin huesos": "animales invertebrados",
   "animales del mar sin huesos": "animales marinos invertebrados",
   "animal sin huesos": "animal invertebrado",
-  "sin huesos": "invertebrados",
   "animales con columna vertebral": "animales vertebrados",
   "animales de sangre caliente": "animales homeotérmicos",
   "animales de sangre fría": "animales poiquilotérmicos",
@@ -10,71 +9,37 @@
   "plantas sin flores": "plantas gimnospermas",
   "ciencia de las plantas": "botánica",
   "ciencia de los insectos": "entomología",
+  "ciencia de animales": "zoología",
   "estudio del clima": "climatología",
   "estudio de los terremotos": "sismología",
   "estudio de las rocas": "geología",
-  "estudiar animales": "estudiar biología",
-  "ciencia de animales": "zoología",
+
+  "la estrella de mar es un animal sin huesos": "la estrella de mar es un animal invertebrado",
+  "los animales sin huesos viven en el agua": "los animales invertebrados viven en el agua",
 
   "hacer comida": "cocinar",
   "hacer de comer": "cocinar",
-  "preparar comida": "cocinar",
 
-  "estar feliz": "sentirse feliz",
-  "muy feliz": "alegre",
-
-  "muy bueno": "excelente",
-  "muy malo": "terrible",
-
-  "la estrella de mar es un animal sin huesos": "la estrella de mar es un animal invertebrado",
-
-  "los animales sin huesos viven en el agua": "los animales invertebrados viven en el agua",
-
-  "ponerse de acuerdo": "llegar a un consenso",
-  "darse cuenta": "percatarse",
-  "llevar a cabo": "realizar",
-  "en vez de": "en lugar de",
-  "a causa de": "debido a",
-  "dar a conocer": "divulgar",
-  "poner en marcha": "implementar",
   "tomar en cuenta": "considerar",
-  "a pesar de todo": "no obstante",
-  "de todas formas": "de cualquier manera",
-  "en pocas palabras": "en síntesis",
-  "dicho de otra forma": "es decir",
+  "dar a conocer": "divulgar",
 
   "hacer una página web": "desarrollar un sitio web",
   "arreglar un error": "corregir un error",
   "guardar un archivo": "almacenar un archivo",
-  "borrar datos": "eliminar datos",
   "prender la computadora": "encender la computadora",
   "apagar la computadora": "apagar el equipo",
   "conectarse a internet": "acceder a internet",
 
   "dolor de cabeza": "cefalea",
   "dolor de estómago": "dolor abdominal",
-  "fiebre alta": "hipertermia",
-  "presión alta": "hipertensión arterial",
   "azúcar en la sangre": "glucemia",
   "grasa en la sangre": "dislipidemia",
-  "huesos débiles": "osteoporosis",
 
   "aprender de memoria": "memorizar",
-  "tomar apuntes": "tomar notas",
   "reprobar un examen": "reprobar una evaluación",
   "pasar un examen": "aprobar una evaluación",
-  "ir a clases": "asistir a clases",
-  "ir a la escuela": "asistir a clases",
-  "entregar tarea": "entregar la asignación",
-
   "ir al cole": "ir a la escuela",
 
   "me da hambre": "tengo hambre",
-  "tengo ganas de comer": "tengo hambre",
-
-  "no entiendo esto": "no comprendo esto",
-  "explicar esto": "aclarar esto",
-
-  "hacer tarea": "realizar tarea",
-  "hacer homework": "hacer tarea"
+  "tengo ganas de comer": "tengo hambre"
 }
