@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 from groq import Groq
 
 
-def pulir_con_gemini(texto_original: str, texto_corregido: str) -> str:
+def pulir_texto(texto_original: str, texto_corregido: str) -> str:
     api_key = os.getenv("GROQ_API_KEY")
     print(f"[GROQ] API key presente: {bool(api_key)}")
     if not api_key:

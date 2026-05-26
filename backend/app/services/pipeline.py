@@ -13,18 +13,18 @@ from app.services.ner import capitalizar_entidades
 from app.services.homofonos import resolver_homofonos
 from app.services.correcciones import aplicar_correcciones_forzadas
 from app.services.semantic import apply_semantic_map
-from app.services.gemini import pulir_con_gemini, detectar_ambiguedad
+from app.services.ai_polish import pulir_texto, detectar_ambiguedad
 
 
-def _cambios_gemini(texto_corregido: str, texto_gemini: str) -> list:
+def _cambios_pulido(texto_corregido: str, texto_pulido: str) -> list:
     palabras_corr = texto_corregido.split()
-    palabras_gem = texto_gemini.split()
-    matcher = difflib.SequenceMatcher(None, palabras_corr, palabras_gem)
+    palabras_pulido = texto_pulido.split()
+    matcher = difflib.SequenceMatcher(None, palabras_corr, palabras_pulido)
     cambios = []
     for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
         if opcode == "replace":
             orig = " ".join(palabras_corr[i1:i2])
-            corr = " ".join(palabras_gem[j1:j2])
+            corr = " ".join(palabras_pulido[j1:j2])
             cambios.append({
                 "tipo": "reemplazo",
                 "original": orig,
@@ -84,26 +84,26 @@ def correct_text(text: str):
 
     texto_corregido = text
 
-    # 10. Pulido semántico con Groq/Gemini (opcional)
-    texto_gemini = pulir_con_gemini(texto_original, texto_corregido)
+    # 10. Pulido semántico con IA (opcional)
+    texto_pulido = pulir_texto(texto_original, texto_corregido)
 
     # Cambios del pipeline (original → pipeline)
     cambios = calcular_cambios(texto_original, texto_corregido)
 
-    # Cambios adicionales de Gemini (pipeline → Gemini)
-    extras = _cambios_gemini(texto_corregido, texto_gemini)
+    # Cambios adicionales del pulido IA (pipeline → pulido)
+    extras = _cambios_pulido(texto_corregido, texto_pulido)
     cambios.extend(extras)
 
-    score = calcular_score(texto_original, texto_gemini, n_cambios_gemini=len(extras))
+    score = calcular_score(texto_original, texto_pulido, n_cambios_gemini=len(extras))
 
     alternativa = None
     try:
-        alternativa = detectar_ambiguedad(texto_original, texto_gemini)
+        alternativa = detectar_ambiguedad(texto_original, texto_pulido)
     except Exception:
         pass
 
     return {
-        "texto_corregido": texto_gemini,
+        "texto_corregido": texto_pulido,
         "cambios": cambios,
         "score": score,
         "alternativa": alternativa
