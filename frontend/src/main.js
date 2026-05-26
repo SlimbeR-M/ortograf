@@ -210,13 +210,21 @@ function resetTextarea() {
 }
 
 function diffPalabras(original, corregido) {
+    // Limpia puntuación de los extremos de una palabra para comparar,
+    // pero preserva el token original para mostrarlo en el resultado.
+    const limpiar = w => w
+        .replace(/[.,;:!?¡¿"'()«»…\-]+$/g, '')
+        .replace(/^[.,;:!?¡¿"'()«»…\-]+/g, '')
+        .toLowerCase();
+
     const normalizar = s => s.toLowerCase()
         .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i')
         .replace(/ó/g,'o').replace(/ú/g,'u').replace(/ü/g,'u').replace(/ñ/g,'n');
 
     const razon = (orig, corr) => {
-        const oL = orig.toLowerCase(), cL = corr.toLowerCase();
-        const oN = normalizar(orig), cN = normalizar(corr);
+        // Comparar usando tokens limpios para detectar el tipo de cambio
+        const oL = limpiar(orig), cL = limpiar(corr);
+        const oN = normalizar(oL), cN = normalizar(cL);
         if (oL === cL && orig !== corr) return `Mayúscula corregida: '${orig}' → '${corr}'`;
         if (oN === cN && oL !== cL)    return `Tilde corregida: '${orig}' → '${corr}'`;
         if (oN === cN && orig !== corr) return `Tilde y mayúscula corregidas: '${orig}' → '${corr}'`;
@@ -227,21 +235,21 @@ function diffPalabras(original, corregido) {
     const corrWords = corregido.split(/\s+/).filter(Boolean);
     const m = origWords.length, n = corrWords.length;
 
-    // LCS DP table
+    // LCS DP — comparar con limpiar() para ignorar puntuación
     const dp = Array.from({length: m + 1}, () => new Array(n + 1).fill(0));
     for (let i = 1; i <= m; i++) {
         for (let j = 1; j <= n; j++) {
-            dp[i][j] = origWords[i-1] === corrWords[j-1]
+            dp[i][j] = limpiar(origWords[i-1]) === limpiar(corrWords[j-1])
                 ? dp[i-1][j-1] + 1
                 : Math.max(dp[i-1][j], dp[i][j-1]);
         }
     }
 
-    // Backtrack collecting individual del/ins ops
+    // Backtrack
     const ops = [];
     let i = m, j = n;
     while (i > 0 || j > 0) {
-        if (i > 0 && j > 0 && origWords[i-1] === corrWords[j-1]) {
+        if (i > 0 && j > 0 && limpiar(origWords[i-1]) === limpiar(corrWords[j-1])) {
             i--; j--;
         } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
             ops.unshift({ type: 'ins', word: corrWords[j-1] });
@@ -252,12 +260,16 @@ function diffPalabras(original, corregido) {
         }
     }
 
-    // Pair adjacent del+ins as individual word replacements
+    // Emparejar del+ins como reemplazos individuales
     const cambios = [];
     let k = 0;
     while (k < ops.length) {
         if (ops[k].type === 'del' && k + 1 < ops.length && ops[k+1].type === 'ins') {
             const o = ops[k].word, c = ops[k+1].word;
+            // ── FIX PROBLEMA 2 ──────────────────────────────────────────────
+            // Si las palabras son iguales tras limpiar puntuación, no es cambio
+            if (limpiar(o) === limpiar(c)) { k += 2; continue; }
+            // ────────────────────────────────────────────────────────────────
             cambios.push({ tipo: 'reemplazo', original: o, corregido: c, razon: razon(o, c) });
             k += 2;
         } else if (ops[k].type === 'del') {
@@ -345,22 +357,33 @@ function attachAmbigHandlers(messageDiv, textoOriginal, alternativa) {
 
             // Actualizar burbuja con el texto de la opción elegida
             const textoNuevo = opcion.texto.replace(/\n{3,}/g, '\n\n');
-            bubble.innerHTML = textoNuevo.replace(/\n/g, '<br>');
+
+            // Heredar puntuación final del texto actual si la opción no la tiene
+            const textoActual = bubble.innerHTML.replace(/<br>/g, '\n').trimEnd();
+            const puntuacionFinal = textoActual.match(/[.!?…]+$/)?.[0] ?? '';
+            const textoConPunto = puntuacionFinal && !textoNuevo.trimEnd().match(/[.!?…]$/)
+                ? textoNuevo.trimEnd() + puntuacionFinal
+                : textoNuevo;
+
+            bubble.innerHTML = textoConPunto.replace(/\n/g, '<br>');
 
             // Recalcular correcciones entre texto original del usuario y la opción
             const nuevosCambios = diffPalabras(textoOriginal, opcion.texto);
+            const nuevoHTML = buildCambiosHTML(nuevosCambios);
             const resumen = messageDiv.querySelector('.cambios-resumen');
-            if (resumen) {
-                const nuevoHTML = buildCambiosHTML(nuevosCambios);
-                if (nuevoHTML) {
-                    const temp = document.createElement('div');
-                    temp.innerHTML = nuevoHTML;
-                    resumen.replaceWith(temp.firstElementChild);
-                    const nuevoEl = messageDiv.querySelector('.cambios-resumen');
-                    if (nuevoEl) attachCambiosToggles(nuevoEl);
+
+            if (nuevoHTML) {
+                const temp = document.createElement('div');
+                temp.innerHTML = nuevoHTML;
+                const nuevoEl = temp.firstElementChild;
+                if (resumen) {
+                    resumen.replaceWith(nuevoEl);
                 } else {
-                    resumen.remove();
+                    block.insertAdjacentElement('beforebegin', nuevoEl);
                 }
+                attachCambiosToggles(nuevoEl);
+            } else if (resumen) {
+                resumen.remove();
             }
 
             // Marcar visualmente la opción elegida

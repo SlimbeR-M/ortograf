@@ -15,7 +15,6 @@ ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
 
 
-# ─── Schemas ─────────────────────────────────────────────────────────────────
 
 class RegisterData(BaseModel):
     nombre: str
@@ -31,7 +30,6 @@ class ResetData(BaseModel):
     nueva_password: str
 
 
-# ─── Utilidades ──────────────────────────────────────────────────────────────
 
 def hashear(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()

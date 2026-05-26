@@ -6,11 +6,6 @@ from groq import Groq
 
 
 def pulir_con_gemini(texto_original: str, texto_corregido: str) -> str:
-    """
-    Pule el texto usando Groq como capa final de corrección semántica.
-    Si no hay API key o falla, devuelve texto_corregido sin cambios.
-    Mantiene el nombre pulir_con_gemini para no modificar pipeline.py.
-    """
     api_key = os.getenv("GROQ_API_KEY")
     print(f"[GROQ] API key presente: {bool(api_key)}")
     if not api_key:
@@ -64,10 +59,6 @@ def pulir_con_gemini(texto_original: str, texto_corregido: str) -> str:
 
 
 def detectar_ambiguedad(texto_original: str, texto_corregido: str) -> dict | None:
-    """
-    Detecta ambigüedad lingüística real entre texto original y corregido.
-    Devuelve None si no hay ambigüedad, si falla o si no hay API key.
-    """
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return None
@@ -104,7 +95,10 @@ def detectar_ambiguedad(texto_original: str, texto_corregido: str) -> dict | Non
                         "ambigüedad en verbos sin tilde.\n"
                         "- Si la corrección es evidente por contexto, NO hay ambigüedad.\n"
                         "- En caso de duda, responde tiene_ambiguedad: false.\n"
-                        "- Es preferible NO reportar ambigüedad a reportar una falsa.\n\n"
+                        "- Es preferible NO reportar ambigüedad a reportar una falsa.\n"
+                        "- Cada opción debe ser el texto COMPLETO, preservando exactamente la "
+                        "puntuación, mayúsculas y estructura del texto corregido. Solo cambia "
+                        "la palabra ambigua, nada más.\n\n"
                         "Responde ÚNICAMENTE en JSON con este formato exacto:\n"
                         '{"tiene_ambiguedad": false}\n'
                         "O si hay ambigüedad genuina:\n"
@@ -136,10 +130,14 @@ def detectar_ambiguedad(texto_original: str, texto_corregido: str) -> dict | Non
             return None
         if "opcion_a" not in data or "opcion_b" not in data:
             return None
-        sim_a = SequenceMatcher(None, texto_original.lower(), data['opcion_a']['texto'].lower()).ratio()
-        sim_b = SequenceMatcher(None, texto_original.lower(), data['opcion_b']['texto'].lower()).ratio()
+
+        # Comparar contra texto_corregido para que opcion_a siempre
+        # coincida con el texto ya mostrado al usuario.
+        sim_a = SequenceMatcher(None, texto_corregido.lower(), data['opcion_a']['texto'].lower()).ratio()
+        sim_b = SequenceMatcher(None, texto_corregido.lower(), data['opcion_b']['texto'].lower()).ratio()
         if sim_b > sim_a:
             data['opcion_a'], data['opcion_b'] = data['opcion_b'], data['opcion_a']
+
         return data
     except Exception:
         return None
