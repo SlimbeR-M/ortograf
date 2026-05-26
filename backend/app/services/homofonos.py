@@ -1,7 +1,10 @@
 import spacy
 import re
+import json
+import os
 
 _nlp = None
+_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 
 def get_nlp():
     global _nlp
@@ -9,36 +12,14 @@ def get_nlp():
         _nlp = spacy.load("es_core_news_md")
     return _nlp
 
-LEXICO_COCINA = {
-    "carne", "pollo", "pescado", "cebolla", "ajo", "aceite",
-    "horno", "sartén", "parrilla", "fuego", "cocina", "cocer",
-    "hervir", "freír", "saltear", "marinar", "sazonar", "sal",
-    "pimienta", "salsa", "guiso", "estofado", "asado"
-}
+with open(os.path.join(_DATA, 'homofonos_lexico.json'), encoding='utf-8') as _fh:
+    _lexico = json.load(_fh)
 
-LEXICO_VIOLENCIA = {
-    "golpeó", "golpeo", "tiró", "tiro", "lanzó", "lanzo", "empujó",
-    "empujo", "atacó", "ataco", "agredió", "agredio", "pegó", "pego",
-    "disparó", "disparo", "amenazó", "huyó", "huyo", "persiguió",
-    "piedra", "objeto", "botella", "palo", "golpe", "puñetazo",
-    "patada", "balazo", "cuchillo", "arma", "proyectil", "roca"
-}
-
-LEXICO_NATURALEZA = {
-    "río", "rio", "agua", "orilla", "corriente", "arroyo", "riachuelo",
-    "lago", "laguna", "manantial", "cauce", "afluente", "caudal"
-}
-
-LEXICO_DESTRUCCION = {
-    "rota", "roto", "dañada", "dañado", "destruida", "destruido",
-    "valla", "puerta", "ventana", "pared", "techo", "muro", "cerca",
-    "deteriorada", "deteriorado", "vieja", "viejo", "caída", "caido"
-}
-
-LEXICO_ELIMINACION = {
-    "basura", "residuos", "desperdicios", "tira", "bota", "elimina",
-    "descarta", "rechaza", "ignora", "desestima", "abandona"
-}
+LEXICO_COCINA:     set = set(_lexico['cocina'])
+LEXICO_VIOLENCIA:  set = set(_lexico['violencia'])
+LEXICO_NATURALEZA: set = set(_lexico['naturaleza'])
+LEXICO_DESTRUCCION:set = set(_lexico['destruccion'])
+LEXICO_ELIMINACION:set = set(_lexico['eliminacion'])
 
 
 def resolver_homofonos(text: str) -> str:

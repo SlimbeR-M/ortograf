@@ -1,0 +1,41 @@
+{
+  "nombres_ambiguos": [
+    "angel",
+    "aurora",
+    "consuelo",
+    "dulce",
+    "esperanza",
+    "fe",
+    "gloria",
+    "leon",
+    "lupe",
+    "luz",
+    "marcos",
+    "mercedes",
+    "paz",
+    "rocio",
+    "rosa",
+    "victoria"
+  ],
+  "titulos_minuscula": [
+    "arquitecta",
+    "arquitecto",
+    "coordinador",
+    "coordinadora",
+    "director",
+    "directora",
+    "doctor",
+    "doctora",
+    "gerente",
+    "ingeniera",
+    "ingeniero",
+    "licenciada",
+    "licenciado",
+    "maestra",
+    "maestro",
+    "secretaria",
+    "secretario",
+    "subsecretaria",
+    "subsecretario"
+  ]
+}

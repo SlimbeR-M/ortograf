@@ -16,12 +16,24 @@ _GEO_PH_PAT = re.compile(r'__GEO\d+__')
 # Después de aplicar las correcciones de LT, los placeholders se restauran
 # a sus formas canónicas del JSON.
 # ---------------------------------------------------------------------------
-_DATOS_SPELL = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+_DATOS_SPELL     = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+_DATOS_SPELLING  = os.path.join(_DATOS_SPELL, 'spelling')
+_DATOS_GEO_SPELL = os.path.join(_DATOS_SPELL, 'geo')
+
+def _load_spell_set(path: str) -> set:
+    with open(path, encoding='utf-8') as _f:
+        return set(json.load(_f))
+
 try:
-    with open(os.path.join(_DATOS_SPELL, 'toponimos_compuestos.json'), encoding='utf-8') as _fsp:
+    with open(os.path.join(_DATOS_GEO_SPELL, 'toponimos_compuestos.json'), encoding='utf-8') as _fsp:
         _TOPONIMOS_SPELL = sorted(json.load(_fsp)['paises_compuestos'], key=len, reverse=True)
 except (OSError, KeyError, json.JSONDecodeError):
     _TOPONIMOS_SPELL = []
+
+RAICES_TECNICAS: set            = _load_spell_set(os.path.join(_DATOS_SPELLING, 'raices_tecnicas.json'))
+PALABRAS_CORTAS_PROTEGIDAS: set = _load_spell_set(os.path.join(_DATOS_SPELLING, 'palabras_cortas.json'))
+FUTUROS_PROTEGIDOS: set         = _load_spell_set(os.path.join(_DATOS_SPELLING, 'futuros_protegidos.json'))
+PALABRAS_REGIONALES: set        = _load_spell_set(os.path.join(_DATOS_SPELLING, 'palabras_regionales.json'))
 
 # Tabla de normalización de tildes para hacer match de entradas sin acentar
 _ACCENT_MAP = str.maketrans('áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')
@@ -35,22 +47,6 @@ for _top in _TOPONIMOS_SPELL:
     if _stripped != _top:
         _pats.append(re.compile(r'\b' + re.escape(_stripped) + r'\b', re.IGNORECASE))
     _TOP_PATTERNS.append((_top, _pats))
-
-
-RAICES_TECNICAS = {
-    "deploy", "build", "debug", "fix", "push", "pull", "fetch",
-    "merge", "clone", "commit", "release", "update", "install",
-    "config", "setup", "import", "export", "render", "load",
-    "cache", "crash", "login", "logout", "upload", "download",
-    "fitear", "fitea", "deployar", "buildear", "dev", "ops",
-    "sysadmin", "devops", "repo", "fullstack"
-}
-
-PALABRAS_CORTAS_PROTEGIDAS = {
-    "dev", "devs", "ops", "api", "css", "xml", "log", "bug",
-    "fix", "git", "sql", "cdn", "ram", "cpu", "gpu", "url",
-    "ia", "ml", "nlp"
-}
 
 CLITICOS_PROTEGIDOS = {
     "nos", "les", "me", "te", "lo", "la", "le",
@@ -78,30 +74,6 @@ def _get_verbos_pasado():
 def _get_geonombres():
     from app.services.postprocess import _GEONOMBRES
     return _GEONOMBRES
-
-FUTUROS_PROTEGIDOS = {
-    "dara", "hara", "tendra", "podra", "querra", "vendra",
-    "saldra", "pondra", "valdra", "cabra", "habra", "sabra",
-    "volvera", "llegara", "comprara", "buscara", "encontrara",
-    "trabajara", "estudiara", "vivira", "comera", "bebera",
-    "correra", "dormira", "traera", "llevara", "pagara",
-    "jugara", "llamara", "esperara", "usara", "necesitara",
-    "ayudara", "cambiara", "pensara", "sentira", "conocera",
-    "recordara", "olvidara", "pedira", "seguira", "entendera",
-    "perdera", "ganara", "recibira", "decidira", "cumplira",
-    "sufrira", "reducira", "producira", "construira", "destruira",
-    "contribuira", "distribuira", "huira", "funcionara", "mejorara",
-    "crecera", "avanzara", "desarrollara", "afectara", "generara",
-    "terminara", "empezara", "comenzara", "acabara", "finalizara",
-    "iniciara", "existira", "aumentara", "disminuira",
-}
-
-PALABRAS_REGIONALES = {
-    "tlayuda", "tlayudas", "mezcal", "mole", "pozole", "tamal", "tamales",
-    "atole", "tepache", "pulque", "chapulines", "molcajete", "comal",
-    "metate", "tlacoyo", "memela", "tetela", "huarache", "sope",
-    "tostada", "enchilada", "quesadilla",
-}
 
 
 def _tiene_raiz_tecnica(palabra: str) -> bool:

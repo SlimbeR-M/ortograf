@@ -1,5 +1,7 @@
 import spacy
 import re
+import json
+import os
 
 # Para normalizar texto antes de pasarlo a spaCy: el modelo reconoce mejor
 # "monica" que "mónica" (entrenado con formas sin acentos en muchos casos).
@@ -10,6 +12,7 @@ import re
 _ACCENT_STRIP = str.maketrans('áéíóúüÁÉÍÓÚÜ', 'aeiouuAEIOUU')
 
 _nlp = None
+_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
 
 # Sufijos que identifican sustantivos abstractos en español: palabras con estos
 # sufijos NUNCA son nombres propios de persona, por lo que no deben capitalizarse
@@ -18,20 +21,12 @@ _SUFIJOS_SUSTANTIVO_ABSTRACTO = (
     'cion', 'idad', 'ismo', 'miento',
 )
 
-NOMBRES_AMBIGUOS = {
-    "rosa", "victoria", "dulce", "marcos", "leon",
-    "paz", "fe", "mercedes", "luz", "aurora", "gloria",
-    "esperanza", "angel", "lupe", "consuelo", "rocio"
-}
+with open(os.path.join(_DATA, 'ner_datos.json'), encoding='utf-8') as _fn:
+    _ner_data = json.load(_fn)
 
+NOMBRES_AMBIGUOS:  set = set(_ner_data['nombres_ambiguos'])
 # Títulos que van en minúscula ante nombre propio según la RAE
-TITULOS_MINUSCULA = {
-    "doctor", "doctora", "ingeniero", "ingeniera",
-    "licenciado", "licenciada", "secretario", "secretaria",
-    "arquitecto", "arquitecta", "maestro", "maestra",
-    "director", "directora", "gerente", "coordinador", "coordinadora",
-    "subsecretario", "subsecretaria",
-}
+TITULOS_MINUSCULA: set = set(_ner_data['titulos_minuscula'])
 
 ARTICULOS_GENERICOS = {"la", "el", "una", "un", "las", "los", "unas", "unos"}
 

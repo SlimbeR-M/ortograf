@@ -6,8 +6,9 @@ from functools import lru_cache
 from .spelling import tool as _lt
 
 _DATOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data')
+_DATOS_GEO = os.path.join(_DATOS, 'geo')
 try:
-    with open(os.path.join(_DATOS, 'toponimos_compuestos.json'), encoding='utf-8') as _f:
+    with open(os.path.join(_DATOS_GEO, 'toponimos_compuestos.json'), encoding='utf-8') as _f:
         _TOPONIMOS = sorted(json.load(_f)['paises_compuestos'], key=len, reverse=True)
 except (OSError, KeyError, json.JSONDecodeError):
     _TOPONIMOS = []
@@ -190,55 +191,11 @@ def _coma_en_enumeracion_sustantivos(text: str) -> str:
     return text
 
 
-_GEONOMBRES = {
-    "caribe": "Caribe",
-    "mediterráneo": "Mediterráneo",
-    "mediterraneo": "Mediterráneo",
-    "atlántico": "Atlántico",
-    "atlantico": "Atlántico",
-    "pacífico": "Pacífico",
-    "pacifico": "Pacífico",
-    "índico": "Índico",
-    "indico": "Índico",
-    "ártico": "Ártico",
-    "artico": "Ártico",
-    "antártico": "Antártico",
-    "antartico": "Antártico",
-    "andes": "Andes",
-    "amazonas": "Amazonas",
-    "sáhara": "Sáhara",
-    "sahara": "Sáhara",
-    "himalaya": "Himalaya",
-    "nilo": "Nilo",
-    "danubio": "Danubio",
-    "pirineos": "Pirineos",
-    "alpes": "Alpes",
-    "orinoco": "Orinoco",
-    "everest": "Everest",
-    "titicaca": "Titicaca",
-    "kilimanjaro": "Kilimanjaro",
-    "urales": "Urales",
-    "volga": "Volga",
-    "congo": "Congo",
-    "ganges": "Ganges",
-    "mekong": "Mekong",
-    "zambeze": "Zambeze",
-    "rin": "Rin",
-    "sena": "Sena",
-    "támesis": "Támesis",
-    "tamesis": "Támesis",
-    "éufrates": "Éufrates",
-    "eufrates": "Éufrates",
-    "tigris": "Tigris",
-    "balcanes": "Balcanes",
-    "cáucaso": "Cáucaso",
-    "caucaso": "Cáucaso",
-    "níger": "Níger",
-    "niger": "Níger",
-    # Estados mexicanos que LT no capitaliza por ser palabras comunes en español
-    "guerrero": "Guerrero",
-    "campeche": "Campeche",
-}
+try:
+    with open(os.path.join(_DATOS_GEO, 'geonombres.json'), encoding='utf-8') as _fg:
+        _GEONOMBRES: dict = json.load(_fg)
+except (OSError, json.JSONDecodeError):
+    _GEONOMBRES = {}
 
 
 def _capitalizar_geonombres_en_contexto(text: str) -> str:
