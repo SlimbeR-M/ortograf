@@ -1,3 +1,4 @@
+import re
 import json
 import os
 
@@ -7,24 +8,34 @@ DATA_PATH = os.path.join(BASE_DIR, "data", "semantic_map.json")
 with open(DATA_PATH, "r", encoding="utf-8") as f:
     SEMANTIC_MAP = json.load(f)
 
+# Pre-compilar patrones con word boundaries para cada clave del mapa.
+# El orden del JSON se preserva: claves más largas (más específicas) van primero.
+_SEMANTIC_PATTERNS: list[tuple[str, str, re.Pattern]] = [
+    (k, v, re.compile(r'\b' + re.escape(k) + r'\b', re.IGNORECASE))
+    for k, v in SEMANTIC_MAP.items()
+]
+
 
 def apply_semantic_map(text: str, guards=None) -> str:
     """
-    Reemplazo semántico SOLO si la frase completa coincide o es segura.
+    Reemplaza frases coloquiales por términos técnicos usando el mapa semántico.
+    Búsqueda case-insensitive con word boundaries; preserva capitalización de inicio.
     """
-
     if guards is None:
         guards = set()
 
-    lower_text = text.lower()
+    for k, v, pat in _SEMANTIC_PATTERNS:
+        if k in guards:
+            continue
+        if not pat.search(text):
+            continue
 
-    for k, v in SEMANTIC_MAP.items():
-        if k in lower_text:
+        def _repl(m, _v=v):
+            matched = m.group(0)
+            if matched[0].isupper():
+                return _v[0].upper() + _v[1:]
+            return _v
 
-            if k in guards:
-                continue
-
-            # reemplazo seguro
-            text = text.replace(k, v)
+        text = pat.sub(_repl, text)
 
     return text

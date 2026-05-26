@@ -11,6 +11,7 @@ from app.services.tech_guard import proteger_tecnicos, restaurar_tecnicos
 from app.services.ner import capitalizar_entidades
 from app.services.homofonos import resolver_homofonos
 from app.services.correcciones import aplicar_correcciones_forzadas
+from app.services.semantic import apply_semantic_map
 from app.services.gemini import pulir_con_gemini
 
 
@@ -38,6 +39,12 @@ def correct_text(text: str):
     # 1. Slang primero — antes de cualquier análisis
     text = replace_slang(text)
     text = aplicar_correcciones_forzadas(text)
+
+    # 1b. Mapa semántico — frases coloquiales → términos formales/técnicos
+    try:
+        text = apply_semantic_map(text)
+    except Exception:
+        pass
 
     # 2. Normalización
     text = normalize(text)

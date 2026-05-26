@@ -228,7 +228,17 @@ def correct_spelling(text: str) -> str:
         if m.replacements:
             orig_words = frag_lower.split()
             repl_words = m.replacements[0].lower().split()
-            if len(orig_words) > 1 and len(repl_words) > 1:
+            if len(orig_words) == 1 and len(repl_words) > 1:
+                # Palabra única → múltiples tokens: solo permitir si similitud >= 0.75
+                # con alguno de los tokens del reemplazo. Si la similitud es baja,
+                # la fragmentación empeora el texto y es mejor dejarla para Groq.
+                _max_sim = max(
+                    SequenceMatcher(None, frag_lower, w).ratio()
+                    for w in repl_words
+                )
+                if _max_sim < 0.75:
+                    continue
+            elif len(orig_words) > 1 and len(repl_words) > 1:
                 if len(orig_words) == len(repl_words):
                     n_same = sum(1 for o, r in zip(orig_words, repl_words) if o == r)
                     if n_same == 0:
