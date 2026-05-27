@@ -1,6 +1,11 @@
 # Ortograf IA
 
 Corrector ortográfico y gramatical inteligente para español. Analiza texto en tiempo real mediante un pipeline de 10 etapas, devuelve el texto corregido con indicadores visuales de cambios, evalúa la calidad de escritura con un score porcentual, y detecta ambigüedades lingüísticas reales con opciones de interpretación intercambiables.
+<img width="1889" height="1066" alt="image" src="https://github.com/user-attachments/assets/8677abb0-cc47-49d1-8761-9f3adccefb53" />
+<img width="1896" height="1060" alt="image" src="https://github.com/user-attachments/assets/3757ed26-c47e-4cc3-b738-d45c2a4ffa67" />
+<img width="1886" height="1071" alt="image" src="https://github.com/user-attachments/assets/a6167e28-93ef-4af3-9752-bb58a338d8da" />
+
+
 
 ---
 
