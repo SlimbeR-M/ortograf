@@ -184,24 +184,10 @@ El paso 10 es opcional: se activa cuando la variable de entorno `GROQ_API_KEY` e
 
 ---
 
-## Versiones
+## Versiones estables
 
 | Versión | Descripción |
 |---------|-------------|
-| v0.1.0 | Frontend completo, IA simulada |
-| v0.2.0 | Backend conectado, corrección básica con LanguageTool |
-| v0.3.0 | Corrector en tiempo real con subrayado de errores |
-| v0.4.0 | Pipeline multicapa con normalización y sustitución de jerga |
-| v0.5.0 | Score de escritura e indicadores visuales de cambios |
-| v0.6.0 | Errores marcados en la burbuja del usuario |
-| v0.6.1 | NER con spaCy, tech guard y desambiguación de homófonos |
-| v0.6.2 | Tildes diacríticas con N-grams, bloqueadores y look-ahead de pronombres |
-| v0.7.0 | Autenticación de usuarios (registro, login, recuperación de contraseña) |
-| v0.7.1 | Historial de conversaciones persistente con SQLite |
-| v0.8.0 | Mapa semántico configurable y correcciones forzadas por patrón |
-| v0.9.0 | Integración de Groq/Llama-3.3-70b como paso 10 del pipeline; score con penalización por correcciones de IA |
-| v0.9.1 | Detección de ambigüedad lingüística real con tarjetas A/B intercambiables en la UI |
-| v0.9.2 | Correcciones agrupadas por categoría (tildes, mayúsculas, puntuación, semántica, ortografía) |
 | v1.0.0 | Refactor completo: datos estáticos de grammar.py extraídos a JSONs en subcarpetas; frontend separado en módulos ES (ui/, utils/, api/); gemini.py renombrado a ai_polish.py; botón de perfil con estado de sesión; pipeline procesado párrafo por párrafo |
 
 ---
